@@ -74,6 +74,9 @@
   .modal h4{font-size:14px;margin:16px 0 4px;color:var(--accent)}
   .modal p,.modal li{font-size:13.5px;color:var(--fg);margin:4px 0}
   .modal ul{margin:4px 0;padding-left:18px}
+  .nick{display:inline-flex;align-items:center;gap:9px;background:linear-gradient(90deg,#232842,#2a2140);
+    border:1px solid var(--accent2);border-radius:99px;padding:9px 18px;font-size:16.5px;font-weight:750;margin:6px 0 6px;letter-spacing:-.2px}
+  .nick .emoji{font-size:22px;line-height:1}
 </style>
 </head>
 <body>
@@ -245,6 +248,7 @@ function renderResult(){
   prog.style.width = "100%";
   const k = buildKernel();
   const headline = oneLiner(state.ans);
+  const nick = nickname(state.ans);
   const rows = [
     ["일이 떨어지면 제일 먼저", k.시작_반사], ["'왜?'를 파는 강도", k.왜_반사_강도], ["정보 부족할 때", k.정보_식욕],
     ["모를 때 어떻게", k.불확실성_처리], ["위험 앞에서", k.리스크_자세],
@@ -257,6 +261,7 @@ function renderResult(){
     <div class="card result">
       <h2>🎉 판단 방식 초안이 나왔습니다 <span class="badge">초안 · 미확인</span></h2>
       <p class="sub">5문항으로 뽑은 당신의 결정 방식이에요. 맞는지 훑고, 공유하거나 저장해보세요.</p>
+      <div class="nick"><span class="emoji">${nick.emoji}</span><span>${nick.label}</span></div>
       <div style="font-size:21px;font-weight:750;letter-spacing:-.4px;margin:2px 0 4px">"${headline}"</div>
       <div class="hint" style="margin:0 0 18px">5문항 초안이에요 · 실제 결정을 쌓으면 더 정교해집니다</div>
       <div class="kv">
@@ -287,7 +292,7 @@ function renderResult(){
     </div>`;
 
   document.getElementById('share').onclick = ()=>{
-    const txt = `[내 판단 방식] 초안\n\n일이 떨어지면: ${k.시작_반사}\n모를 때: ${k.불확실성_처리}\n위험 앞에서: ${k.리스크_자세}\n버리는 것 → 지키는 것: ${k.우선순위_힌트}\n\n— "${headline}"\n(초안 · 실제 결정으로 다듬어집니다)`;
+    const txt = `[내 판단 방식] ${nick.emoji} ${nick.label} (초안)\n\n일이 떨어지면: ${k.시작_반사}\n모를 때: ${k.불확실성_처리}\n위험 앞에서: ${k.리스크_자세}\n버리는 것 → 지키는 것: ${k.우선순위_힌트}\n\n— "${headline}"\n(초안 · 실제 결정으로 다듬어집니다)`;
     navigator.clipboard.writeText(txt).then(()=>toast("판단 방식 복사됨"));
   };
   document.getElementById('copy').onclick = ()=>{ navigator.clipboard.writeText(json).then(()=>toast("복사됨")); };
@@ -357,6 +362,11 @@ async function submitKernel(kernel, deletionToken){
   throw {config:true};
 }
 
+function nickname(a){
+  const base = { cause:{e:"🔍", n:"탐구가"}, goal:{e:"🎯", n:"실행가"}, limit:{e:"🛡️", n:"파수꾼"} }[a.q1.choice];
+  const adj  = a.q3.choice==="aggressive" ? "과감한" : "돌다리 두드리는";
+  return { emoji: base.e, label: `${adj} ${base.n}` };
+}
 function oneLiner(a){
   const map = {
     "cause|certain":"이유부터 파고, 확인하고 움직인다",
