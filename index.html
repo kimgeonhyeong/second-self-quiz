@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Second Self · 5분 커널 퀴즈</title>
+<title>내 결정 방식 퀴즈 · Second Self</title>
 <style>
   :root{
     --bg:#0e0f13; --card:#181a21; --line:#272a33; --fg:#e8eaf0; --muted:#9aa0ad;
@@ -65,17 +65,49 @@
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;
     background:var(--ok);color:#0e0f13;font-weight:700;padding:10px 18px;border-radius:10px;transition:.25s;pointer-events:none}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .pplink{color:var(--accent);font-size:12.5px;text-decoration:underline;cursor:pointer;background:none;border:none;padding:0;margin-top:10px;display:inline-block}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
+  .modal.show{display:flex}
+  .modal .box{background:var(--card);border:1px solid var(--line);border-radius:16px;max-width:640px;width:100%;max-height:82vh;overflow:auto;padding:24px}
+  .modal h3{margin:0 0 4px;font-size:17px}
+  .modal .eff{color:var(--muted);font-size:12.5px;margin:0 0 16px}
+  .modal h4{font-size:14px;margin:16px 0 4px;color:var(--accent)}
+  .modal p,.modal li{font-size:13.5px;color:var(--fg);margin:4px 0}
+  .modal ul{margin:4px 0;padding-left:18px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>🧠 Second Self · 5분 커널 퀴즈</h1>
-    <p>선택하고 <b>왜</b>를 한 줄로. 그 "왜"가 당신 판단 방식의 본체입니다. (5문항 · 약 5분)</p>
+    <h1>🧠 나는 어떻게 결정하는 사람인가?</h1>
+    <p>선택하고, 왜인지 한 줄. 5문항 · 약 5분으로 당신만의 판단 방식이 나옵니다.</p>
   </header>
   <div class="bar"><i id="prog"></i></div>
   <div id="stage"></div>
 </div>
+<div class="modal" id="ppModal"><div class="box">
+  <h3>개인정보 수집·이용 고지</h3>
+  <p class="eff">시행일 2026-07-08 · 이 퀴즈는 사고 커널(판단 방식) 연구·개선을 위해 아래와 같이 데이터를 처리합니다.</p>
+  <h4>1. 수집 항목 (익명)</h4>
+  <ul>
+    <li>5개 문항의 선택값과 "왜" 자유서술</li>
+    <li>제출 시각, 익명 삭제 코드</li>
+    <li>이름·이메일·연락처 등 개인 식별정보는 <b>수집하지 않습니다.</b></li>
+  </ul>
+  <h4>2. 수집·이용 목적</h4>
+  <p>사고 커널 추출·재현 품질 개선 및 제품 연구.</p>
+  <h4>3. 보유·이용 기간</h4>
+  <p>수집일로부터 12개월 또는 목적 달성 시까지 보유 후 파기.</p>
+  <h4>4. 처리 위탁·국외 이전</h4>
+  <p>응답은 폼 처리 서비스(예: Formspree — 미국, Supabase 등)에 저장될 수 있으며, 이 과정에서 데이터가 국외 서버에 보관될 수 있습니다.</p>
+  <h4>5. 동의를 거부할 권리 및 불이익</h4>
+  <p>수집에 동의하지 않을 수 있으며, 이 경우 제출만 되지 않습니다. 퀴즈 결과(커널 초안)는 본인 기기에서 그대로 확인·다운로드할 수 있습니다.</p>
+  <h4>6. 정보주체 권리 (삭제 등)</h4>
+  <p>제출 시 발급되는 <b>익명 삭제 코드</b>로 삭제를 요청할 수 있습니다. 문의·삭제 요청: <b>[운영자 연락처를 입력하세요]</b></p>
+  <h4>7. 주의</h4>
+  <p>만 14세 미만은 법정대리인 동의가 필요합니다. "왜" 답변에 개인정보·민감정보를 입력하지 마세요.</p>
+  <div style="margin-top:18px"><button id="ppClose">닫기</button></div>
+</div></div>
 <div class="toast" id="toast">복사됨</div>
 
 <script>
@@ -155,7 +187,7 @@ function render(){
       <div class="err" id="err"></div>
       <div class="nav">
         <button class="${state.i===0?'ghost':''}" id="prev">← 이전</button>
-        <button class="primary" id="next">${state.i===QUESTIONS.length-1?'커널 초안 만들기 →':'다음 →'}</button>
+        <button class="primary" id="next">${state.i===QUESTIONS.length-1?'내 판단 방식 꺼내기 →':'다음 →'}</button>
       </div>
     </div>`;
   stage.querySelectorAll('.opt').forEach(el=>{
@@ -212,18 +244,21 @@ function buildKernel(){
 function renderResult(){
   prog.style.width = "100%";
   const k = buildKernel();
+  const headline = oneLiner(state.ans);
   const rows = [
-    ["시작 반사", k.시작_반사], ["왜-반사 강도", k.왜_반사_강도], ["정보 식욕", k.정보_식욕],
-    ["불확실성 처리", k.불확실성_처리], ["리스크 자세", k.리스크_자세],
-    ["불가역 tie-break", `<span class="badge">${k.불가역_tie_break}</span>`],
-    ["핵심 가치 저울", k.핵심_가치_저울], ["우선순위 힌트", k.우선순위_힌트], ["출력 스타일", k.출력_스타일]
+    ["일이 떨어지면 제일 먼저", k.시작_반사], ["'왜?'를 파는 강도", k.왜_반사_강도], ["정보 부족할 때", k.정보_식욕],
+    ["모를 때 어떻게", k.불확실성_처리], ["위험 앞에서", k.리스크_자세],
+    ["둘 다 못 돌릴 때", `<span class="badge">${k.불가역_tie_break}</span>`],
+    ["뭘 먼저 지키나", k.핵심_가치_저울], ["버리는 것 / 지키는 것", k.우선순위_힌트], ["말·글 방식", k.출력_스타일]
   ];
   const json = JSON.stringify(k, null, 2);
   const collectOn = COLLECT.mode !== "off";
   stage.innerHTML = `
     <div class="card result">
-      <h2>✅ 커널 초안 생성됨 <span class="badge">초안 · 미확인</span></h2>
-      <p class="sub">5문항 시드에서 뽑은 판단 방식입니다. 맞는지 훑고, 제출하거나 JSON을 저장하세요.</p>
+      <h2>🎉 판단 방식 초안이 나왔습니다 <span class="badge">초안 · 미확인</span></h2>
+      <p class="sub">5문항으로 뽑은 당신의 결정 방식이에요. 맞는지 훑고, 공유하거나 저장해보세요.</p>
+      <div style="font-size:21px;font-weight:750;letter-spacing:-.4px;margin:2px 0 4px">"${headline}"</div>
+      <div class="hint" style="margin:0 0 18px">5문항 초안이에요 · 실제 결정을 쌓으면 더 정교해집니다</div>
       <div class="kv">
         ${rows.map(r=>`<div class="row"><div class="k">${r[0]}</div><div class="v">${r[1]}</div></div>`).join('')}
       </div>
@@ -233,10 +268,12 @@ function renderResult(){
           <input type="checkbox" id="consent">
           <span><b>익명</b>으로 이 커널 초안을 저장하는 데 동의합니다. 목적: 커널 품질 개선. 항목: 위 5개 선택·"왜" 답변(식별정보 없음). 제출 후 받는 <b>삭제 코드</b>로 언제든 삭제 요청할 수 있습니다.</span>
         </label>
+        <button type="button" class="pplink" id="ppOpen">개인정보 수집·이용 고지 보기</button>
         <div style="margin-top:12px"><button class="primary" id="submit">익명으로 제출하기</button></div>
         <div class="substatus" id="subStatus"></div>
       </div>` : ``}
       <div class="actions">
+        <button class="primary" id="share">📋 내 판단 방식 복사</button>
         <button id="copy">JSON 복사</button>
         <button id="dl">JSON 다운로드</button>
         <button id="again">다시 하기</button>
@@ -249,6 +286,10 @@ function renderResult(){
       </div>
     </div>`;
 
+  document.getElementById('share').onclick = ()=>{
+    const txt = `[내 판단 방식] 초안\n\n일이 떨어지면: ${k.시작_반사}\n모를 때: ${k.불확실성_처리}\n위험 앞에서: ${k.리스크_자세}\n버리는 것 → 지키는 것: ${k.우선순위_힌트}\n\n— "${headline}"\n(초안 · 실제 결정으로 다듬어집니다)`;
+    navigator.clipboard.writeText(txt).then(()=>toast("판단 방식 복사됨"));
+  };
   document.getElementById('copy').onclick = ()=>{ navigator.clipboard.writeText(json).then(()=>toast("복사됨")); };
   document.getElementById('dl').onclick = ()=>{
     const b = new Blob([json], {type:"application/json"});
@@ -258,6 +299,7 @@ function renderResult(){
   document.getElementById('again').onclick = ()=>{ state.i=0; state.ans={}; render(); };
 
   if(collectOn){
+    const ppO=document.getElementById('ppOpen'); if(ppO) ppO.onclick=()=>document.getElementById('ppModal').classList.add('show');
     document.getElementById('submit').onclick = async ()=>{
       const st = document.getElementById('subStatus');
       if(!document.getElementById('consent').checked){ st.style.color="var(--warn)"; st.textContent="저장 동의에 체크해주세요."; return; }
@@ -315,8 +357,22 @@ async function submitKernel(kernel, deletionToken){
   throw {config:true};
 }
 
+function oneLiner(a){
+  const map = {
+    "cause|certain":"이유부터 파고, 확인하고 움직인다",
+    "cause|speed":"이유는 묻되, 실행은 빠르다",
+    "goal|speed":"결과 보고 바로 달린다",
+    "goal|certain":"목표 잡고, 확인하고 달린다",
+    "limit|speed":"리스크 체크 후 빠르게",
+    "limit|certain":"리스크 체크, 확인까지 마치고 움직인다"
+  };
+  return map[a.q1.choice+"|"+a.q2.choice] || "당신만의 방식으로 결정한다";
+}
 function escapeHtml(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg||"완료";t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1400);}
+
+document.getElementById('ppClose').onclick=()=>document.getElementById('ppModal').classList.remove('show');
+document.getElementById('ppModal').onclick=(e)=>{ if(e.target.id==='ppModal') document.getElementById('ppModal').classList.remove('show'); };
 
 render();
 </script>
