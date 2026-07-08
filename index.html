@@ -130,32 +130,32 @@ const COLLECT = {
 /* ========================================================================= */
 
 const QUESTIONS = [
-  { id:"q1", axis:"시작 반사 + 왜-반사 강도",
+  { id:"q1", axis:"생각의 첫 반응",
     title:"일이 툭 떨어졌을 때, 제일 먼저 뜨는 것",
     scenario:"누가 갑자기 '이것 좀 해줘'라고 일을 던진다. 머릿속에 제일 먼저 뜨는 건?",
     options:[{v:"goal",t:"결과물이 어떤 모습이어야 하는지 (목표부터)"},
              {v:"cause",t:"이걸 왜 원하지·진짜 문제가 뭔지 (원인부터)"},
              {v:"limit",t:"뭘 건드리면 안 되나·리스크 (제약부터)"}],
     why:"왜 그게 먼저 떠요?" },
-  { id:"q2", axis:"정보 식욕 (속도 ↔ 확실성)",
+  { id:"q2", axis:"속도 vs 확인",
     title:"정보 60%, 마감은 내일",
     scenario:"필요한 정보의 60%만 있는데 마감이 내일이다. 지금?",
     options:[{v:"speed",t:"있는 걸로 결정하고 간다"},
              {v:"certain",t:"부족한 걸 확인하고, 마감을 미루더라도 채운다"}],
     why:"왜? 그리고 반대로 갈 때는 언제예요?" },
-  { id:"q3", axis:"리스크 자세 + 되돌림 가중치",
+  { id:"q3", axis:"위험을 대하는 법",
     title:"되돌릴 수 없는 큰 것 vs 되돌릴 수 있는 작은 것",
     scenario:"하나만. A: 효과 크지만 한 번 하면 되돌릴 수 없다. B: 효과 작지만 언제든 되돌릴 수 있다.",
     options:[{v:"aggressive",t:"A — 되돌릴 수 없어도 효과 큰 쪽"},
              {v:"conservative",t:"B — 효과 작아도 되돌릴 수 있는 쪽"}],
     why:"왜? 그리고 그게 '돈·신뢰·데이터'처럼 영영 사라지는 거라면 답이 바뀌나요?" },
-  { id:"q4", axis:"불가역 tie-break (최고 신호)",
+  { id:"q4", axis:"둘 다 못 되돌릴 때",
     title:"둘 다 되돌릴 수 없을 때",
     scenario:"둘 다 되돌릴 수 없다. A: 지금 새고 있는 손실을 당장 막기. B: 아직 안 터졌지만 터지면 더 큰 잠재 리스크를 예방하기.",
     options:[{v:"stop_loss",t:"A — 지금 새는 손실부터 막는다"},
              {v:"prevent",t:"B — 더 큰 잠재 리스크를 먼저 예방한다"}],
     why:"왜? 금액이 비슷해도 같나요?" },
-  { id:"q5", axis:"핵심 가치 저울 + 우선순위 + 레드라인",
+  { id:"q5", axis:"무엇을 먼저 지키나",
     title:"품질·속도·비용, 하나는 버려야 한다면",
     scenario:"셋 다 못 지킨다. 하나 버려야 하면?",
     options:[{v:"drop_quality",t:"품질을 버린다"},
@@ -165,7 +165,7 @@ const QUESTIONS = [
 ];
 
 const QUESTIONS_DEEP = [
-  { id:"d1", type:"choice", axis:"분해 방식",
+  { id:"d1", type:"choice", axis:"문제 쪼개는 법",
     title:"복잡한 문제를 쪼갤 때",
     scenario:"머리 아픈 문제를 마주하면 어떻게 접근해요?",
     options:[{v:"step",t:"순서대로 단계를 밟아 쪼갠다"},
@@ -173,24 +173,24 @@ const QUESTIONS_DEEP = [
              {v:"case",t:"비슷한 사례에 빗대 푼다"},
              {v:"whole",t:"통째로 감으로 잡는다"}],
     why:"왜 그 방식이 편해요?" },
-  { id:"d2", type:"choice", axis:"추상 고도",
+  { id:"d2", type:"choice", axis:"생각의 초점",
     title:"생각의 초점",
     scenario:"일할 때 주로 어디에 초점이 가요?",
     options:[{v:"big",t:"큰 방향·비전"},
              {v:"mid",t:"중간 계획·구조"},
              {v:"detail",t:"구체 디테일"}],
     why:"왜 거기에 초점이 가요?" },
-  { id:"d3", type:"choice", axis:"최악 상정",
+  { id:"d3", type:"choice", axis:"최악을 그리나",
     title:"결정 전에 최악을 그리나",
     scenario:"중요한 결정 전에 최악의 경우를 먼저 상상하는 편이에요?",
     options:[{v:"yes",t:"항상 최악부터 그린다"},
              {v:"no",t:"대체로 잘 되는 쪽을 본다"}],
     why:"왜 그래요?" },
-  { id:"d4", type:"text", axis:"절대 원칙 (레드라인)",
+  { id:"d4", type:"text", axis:"타협 못 하는 선",
     title:"절대 타협 못 하는 원칙",
     scenario:"무슨 일이 있어도 지키는 원칙 하나만 적어주세요.",
     why:"절대 못 넘는 선 한 줄" },
-  { id:"d5", type:"text", axis:"강점 / 약점",
+  { id:"d5", type:"text", axis:"강점과 약점",
     title:"잘 잡는 것 / 자주 놓치는 것",
     scenario:"남보다 잘 잡는 것 하나, 자주 놓치는 것 하나.",
     why:"예) 잘함=…, 놓침=…" }
@@ -260,34 +260,34 @@ function save(q){
 
 function buildKernel(){
   const a = state.ans;
-  const start = {goal:"목표형", cause:"원인형", limit:"제약형"}[a.q1.choice];
-  const whyReflex = a.q1.choice==="cause" ? "상" : (a.q1.choice==="limit" ? "중" : "중/하");
-  const infoAppetite = a.q2.choice==="speed" ? "기본 빠름 — 있는 정보로 실행" : "기본 충분 — 확인 우선, 마감보다 리스크";
-  const uncertainty  = a.q2.choice==="speed" ? "추정으로 메우고 진행" : "보류·확인 후 진행";
-  const risk = a.q3.choice==="aggressive" ? "기본 공격 · 되돌림 가중치 낮음" : "기본 보수 · 되돌림 가중치 높음";
-  const tie  = a.q4.choice==="stop_loss" ? "진행 중 손실 차단 우선" : "잠재 리스크 예방 우선";
+  const start = {goal:"결과가 어떤 모습인지부터 보는 편", cause:"왜 그런지부터 파고드는 편", limit:"뭘 피해야 하는지부터 보는 편"}[a.q1.choice];
+  const whyReflex = a.q1.choice==="cause" ? "거의 항상 이유를 먼저 따진다" : (a.q1.choice==="limit" ? "필요할 때 이유를 따진다" : "이유보단 일단 움직이는 편");
+  const infoAppetite = a.q2.choice==="speed" ? "있는 정보로 일단 달린다" : "마감보다 확인이 먼저 — 실수가 더 무섭다";
+  const uncertainty  = a.q2.choice==="speed" ? "일단 짐작하고 진행한다" : "모르면 확인하고 간다, 멈추더라도";
+  const risk = a.q3.choice==="aggressive" ? "어차피 고치면 돼 — 일단 해보는 편" : "되돌리기 어려운 건 조심 — 신중히 가는 편";
+  const tie  = a.q4.choice==="stop_loss" ? "지금 새는 걸 막는다" : "터지기 전에 막는다";
   const dropMap = {
-    drop_quality:{keep:"속도·비용", tilt:"속도·비용으로 기욺(품질은 회복 가능으로 봄)", drop:"품질"},
-    drop_speed:  {keep:"품질·비용", tilt:"품질·비용 우선(속도를 양보)", drop:"속도"},
-    drop_cost:   {keep:"품질·속도", tilt:"품질·속도 우선(비용을 양보)", drop:"비용"}
+    drop_quality:{tilt:"빨리·저렴하게 — 퀄리티는 나중에 올리면 된다", hint:"퀄리티 버리고, 속도·비용 지킨다"},
+    drop_speed:  {tilt:"제대로·저렴하게 — 느려도 괜찮다", hint:"속도 버리고, 퀄리티·비용 지킨다"},
+    drop_cost:   {tilt:"제대로·빠르게 — 돈은 나중에 생각한다", hint:"비용 버리고, 퀄리티·속도 지킨다"}
   }[a.q5.choice];
   const whys = [a.q1.why,a.q2.why,a.q3.why,a.q4.why,a.q5.why];
   const avg = whys.reduce((s,w)=>s+w.length,0)/whys.length;
-  const outStyle = avg < 45 ? "결론 먼저 · 짧고 건조" : "배경·맥락을 곁들인 서사형";
+  const outStyle = avg < 45 ? "결론부터 딱 — 군더더기 없이" : "배경부터 차근차근 설명하는 편";
   const k = {
     _meta:{ source:"5분 압축 퀴즈(입구 시드) — 초안", confirmed:false,
       note:"본인 확인 전 = 초안. 고강도 위임 금지. 깊이는 이후 실제 결정의 수동 관찰(L2)로 채운다.",
       generated_at:new Date().toISOString() },
     시작_반사:start, 왜_반사_강도:whyReflex, 정보_식욕:infoAppetite, 불확실성_처리:uncertainty,
     리스크_자세:risk, 불가역_tie_break:tie, 핵심_가치_저울:dropMap.tilt,
-    우선순위_힌트:"버리는 것="+dropMap.drop+" / 지키는 것="+dropMap.keep, 출력_스타일:outStyle,
+    우선순위_힌트:dropMap.hint, 출력_스타일:outStyle,
     근거_원문_왜:{ q1_시작반사:a.q1.why, q2_정보식욕:a.q2.why, q3_리스크:a.q3.why, q4_tiebreak:a.q4.why, q5_가치저울:a.q5.why }
   };
   const d = state.ansDeep;
   if(d && d.d1){
-    k.분해_방식 = {step:"순서대로 단계", part:"부분·조각으로", case:"사례에 빗대", whole:"통째로 직관"}[d.d1.choice];
-    k.추상_고도 = {big:"큰 방향·비전", mid:"중간 계획·구조", detail:"구체 디테일"}[d.d2.choice];
-    k.최악_상정 = d.d3.choice==="yes" ? "항상 최악부터 상정" : "대체로 긍정 전망";
+    k.분해_방식 = {step:"순서대로 하나씩 쪼갠다", part:"조각조각 나눠서 각각 본다", case:"비슷한 예시로 빗대어 푼다", whole:"전체를 한 번에 감으로 잡는다"}[d.d1.choice];
+    k.추상_고도 = {big:"큰 그림과 방향에 초점", mid:"계획과 구조에 초점", detail:"세부 디테일에 초점"}[d.d2.choice];
+    k.최악_상정 = d.d3.choice==="yes" ? "항상 최악부터 그려본다" : "대체로 잘 될 거라고 본다";
     k.절대_원칙 = d.d4.why;
     k.강점_약점 = d.d5.why;
     k._meta.source = "5분 퀵 + 심화 라운드 — 초안";
@@ -312,7 +312,6 @@ function renderResult(){
     rows.push(["문제 쪼갤 때", k.분해_방식], ["생각 초점", k.추상_고도], ["최악 상정", k.최악_상정],
       ["절대 원칙", escapeHtml(k.절대_원칙)], ["강점/약점", escapeHtml(k.강점_약점)]);
   }
-  const json = JSON.stringify(k, null, 2);
   const collectOn = COLLECT.mode !== "off";
   stage.innerHTML = `
     <div class="card result">
@@ -340,11 +339,8 @@ function renderResult(){
       </div>` : ``}
       <div class="actions">
         <button class="primary" id="share">📋 내 판단 방식 복사</button>
-        <button id="copy">JSON 복사</button>
-        <button id="dl">JSON 다운로드</button>
         <button id="again">다시 하기</button>
       </div>
-      <pre id="json">${escapeHtml(json)}</pre>
       <div class="note">
         입구 <b>시드(초안)</b>입니다. 스키마 규칙상 <b>본인 확인 전 커널은 초안</b> — 위임 강도를 낮게.
         진짜 해자(개인 캘리브레이션)는 이후 <b>실제 결정의 수락·오버라이드·결과 관찰</b>로 채웁니다.
@@ -355,12 +351,6 @@ function renderResult(){
   document.getElementById('share').onclick = ()=>{
     const txt = `[내 판단 방식] ${nick.emoji} ${nick.label} (초안)\n\n일이 떨어지면: ${k.시작_반사}\n모를 때: ${k.불확실성_처리}\n위험 앞에서: ${k.리스크_자세}\n버리는 것 → 지키는 것: ${k.우선순위_힌트}\n\n— "${headline}"\n(초안 · 실제 결정으로 다듬어집니다)`;
     navigator.clipboard.writeText(txt).then(()=>toast("판단 방식 복사됨"));
-  };
-  document.getElementById('copy').onclick = ()=>{ navigator.clipboard.writeText(json).then(()=>toast("복사됨")); };
-  document.getElementById('dl').onclick = ()=>{
-    const b = new Blob([json], {type:"application/json"});
-    const u = URL.createObjectURL(b); const a2 = document.createElement('a');
-    a2.href=u; a2.download="kernel-draft.json"; a2.click(); URL.revokeObjectURL(u);
   };
   document.getElementById('again').onclick = ()=>{ state.i=0; state.phase="quick"; state.ans={}; state.ansDeep={}; render(); };
   const deepBtn = document.getElementById('deep');
