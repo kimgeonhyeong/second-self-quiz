@@ -164,56 +164,97 @@ const QUESTIONS = [
     why:"왜 그걸 버려요? 반대로 절대 못 버리는 하나는?" }
 ];
 
-const state = {i:0, ans:{}};
+const QUESTIONS_DEEP = [
+  { id:"d1", type:"choice", axis:"분해 방식",
+    title:"복잡한 문제를 쪼갤 때",
+    scenario:"머리 아픈 문제를 마주하면 어떻게 접근해요?",
+    options:[{v:"step",t:"순서대로 단계를 밟아 쪼갠다"},
+             {v:"part",t:"부분·조각으로 나눠 각각 본다"},
+             {v:"case",t:"비슷한 사례에 빗대 푼다"},
+             {v:"whole",t:"통째로 감으로 잡는다"}],
+    why:"왜 그 방식이 편해요?" },
+  { id:"d2", type:"choice", axis:"추상 고도",
+    title:"생각의 초점",
+    scenario:"일할 때 주로 어디에 초점이 가요?",
+    options:[{v:"big",t:"큰 방향·비전"},
+             {v:"mid",t:"중간 계획·구조"},
+             {v:"detail",t:"구체 디테일"}],
+    why:"왜 거기에 초점이 가요?" },
+  { id:"d3", type:"choice", axis:"최악 상정",
+    title:"결정 전에 최악을 그리나",
+    scenario:"중요한 결정 전에 최악의 경우를 먼저 상상하는 편이에요?",
+    options:[{v:"yes",t:"항상 최악부터 그린다"},
+             {v:"no",t:"대체로 잘 되는 쪽을 본다"}],
+    why:"왜 그래요?" },
+  { id:"d4", type:"text", axis:"절대 원칙 (레드라인)",
+    title:"절대 타협 못 하는 원칙",
+    scenario:"무슨 일이 있어도 지키는 원칙 하나만 적어주세요.",
+    why:"절대 못 넘는 선 한 줄" },
+  { id:"d5", type:"text", axis:"강점 / 약점",
+    title:"잘 잡는 것 / 자주 놓치는 것",
+    scenario:"남보다 잘 잡는 것 하나, 자주 놓치는 것 하나.",
+    why:"예) 잘함=…, 놓침=…" }
+];
+
+const state = {i:0, phase:"quick", ans:{}, ansDeep:{}};
 const stage = document.getElementById('stage');
 const prog  = document.getElementById('prog');
 
+function curList(){ return state.phase==="deep" ? QUESTIONS_DEEP : QUESTIONS; }
+function curStore(){ return state.phase==="deep" ? state.ansDeep : state.ans; }
+
 function render(){
-  prog.style.width = (state.i/QUESTIONS.length*100)+'%';
-  if(state.i >= QUESTIONS.length){ renderResult(); return; }
-  const q = QUESTIONS[state.i];
-  const a = state.ans[q.id] || {choice:null, why:""};
+  const LIST = curList(), STORE = curStore(), total = LIST.length;
+  prog.style.width = (state.i/total*100)+'%';
+  if(state.i >= total){ renderResult(); return; }
+  const q = LIST[state.i];
+  const a = STORE[q.id] || {choice:null, why:""};
+  const isText = q.type==="text";
+  const lastLabel = state.phase==="deep" ? "더 정교한 결과 보기 →" : "내 판단 방식 꺼내기 →";
   stage.innerHTML = `
     <div class="card">
-      <div class="qnum">Q${state.i+1} / ${QUESTIONS.length} · ${q.axis}</div>
+      <div class="qnum">${state.phase==="deep"?"심화 D":"Q"}${state.i+1} / ${total} · ${q.axis}</div>
       <div class="qtitle">${q.title}</div>
       <p class="scenario">${q.scenario}</p>
+      ${isText ? `` : `
       <div class="opts" id="opts">
         ${q.options.map(o=>`
           <div class="opt ${a.choice===o.v?'sel':''}" data-v="${o.v}">
             <span class="dot"></span><span>${o.t}</span>
           </div>`).join('')}
-      </div>
-      <label class="why">${q.why} <span>*</span> <span class="hint">— 이 한 줄이 커널의 핵심입니다 (필수)</span></label>
-      <textarea id="why" placeholder="한 줄로 솔직하게… (판단 방식만)">${a.why||""}</textarea>
+      </div>`}
+      <label class="why">${q.why} <span>*</span> <span class="hint">— ${isText?"이 답이 커널을 더 채웁니다 (필수)":"이 한 줄이 커널의 핵심입니다 (필수)"}</span></label>
+      <textarea id="why" placeholder="${isText?"한 줄~두 줄로…":"한 줄로 솔직하게… (판단 방식만)"}">${a.why||""}</textarea>
       <div class="hint" style="margin-top:6px">⚠️ 이름·연락처·회사·특정인 등 개인정보·민감정보는 적지 마세요. 익명으로 수집됩니다.</div>
       <div class="err" id="err"></div>
       <div class="nav">
         <button class="${state.i===0?'ghost':''}" id="prev">← 이전</button>
-        <button class="primary" id="next">${state.i===QUESTIONS.length-1?'내 판단 방식 꺼내기 →':'다음 →'}</button>
+        <button class="primary" id="next">${state.i===total-1?lastLabel:'다음 →'}</button>
       </div>
     </div>`;
-  stage.querySelectorAll('.opt').forEach(el=>{
-    el.onclick = ()=>{
-      state.ans[q.id] = {choice: el.dataset.v, why: document.getElementById('why').value};
-      stage.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));
-      el.classList.add('sel');
-      document.getElementById('err').textContent = "";
-    };
-  });
-  document.getElementById('prev').onclick = ()=>{ save(q); state.i--; render(); };
+  if(!isText){
+    stage.querySelectorAll('.opt').forEach(el=>{
+      el.onclick = ()=>{
+        STORE[q.id] = {choice: el.dataset.v, why: document.getElementById('why').value};
+        stage.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));
+        el.classList.add('sel');
+        document.getElementById('err').textContent = "";
+      };
+    });
+  }
+  document.getElementById('prev').onclick = ()=>{ save(q); if(state.i>0){ state.i--; } render(); };
   document.getElementById('next').onclick = ()=>{
     const why = document.getElementById('why').value.trim();
-    const choice = (state.ans[q.id]||{}).choice;
-    if(!choice){ document.getElementById('err').textContent = "선택지를 하나 골라주세요."; return; }
-    if(why.length < 4){ document.getElementById('err').textContent = "‘왜’를 한 줄 적어주세요 — 여기서 커널이 나옵니다. (스킵 불가)"; return; }
+    if(!isText && !((STORE[q.id]||{}).choice)){ document.getElementById('err').textContent = "선택지를 하나 골라주세요."; return; }
+    if(why.length < 4){ document.getElementById('err').textContent = isText ? "한 줄 적어주세요. (스킵 불가)" : "‘왜’를 한 줄 적어주세요 — 여기서 커널이 나옵니다. (스킵 불가)"; return; }
     save(q); state.i++; render();
   };
 }
 function save(q){
-  state.ans[q.id] = {
-    choice: (state.ans[q.id]||{}).choice,
-    why: document.getElementById('why') ? document.getElementById('why').value.trim() : (state.ans[q.id]||{}).why
+  const STORE = curStore(), el = document.getElementById('why');
+  STORE[q.id] = {
+    choice: (STORE[q.id]||{}).choice,
+    why: el ? el.value.trim() : (STORE[q.id]||{}).why
   };
 }
 
@@ -233,7 +274,7 @@ function buildKernel(){
   const whys = [a.q1.why,a.q2.why,a.q3.why,a.q4.why,a.q5.why];
   const avg = whys.reduce((s,w)=>s+w.length,0)/whys.length;
   const outStyle = avg < 45 ? "결론 먼저 · 짧고 건조" : "배경·맥락을 곁들인 서사형";
-  return {
+  const k = {
     _meta:{ source:"5분 압축 퀴즈(입구 시드) — 초안", confirmed:false,
       note:"본인 확인 전 = 초안. 고강도 위임 금지. 깊이는 이후 실제 결정의 수동 관찰(L2)로 채운다.",
       generated_at:new Date().toISOString() },
@@ -242,6 +283,17 @@ function buildKernel(){
     우선순위_힌트:"버리는 것="+dropMap.drop+" / 지키는 것="+dropMap.keep, 출력_스타일:outStyle,
     근거_원문_왜:{ q1_시작반사:a.q1.why, q2_정보식욕:a.q2.why, q3_리스크:a.q3.why, q4_tiebreak:a.q4.why, q5_가치저울:a.q5.why }
   };
+  const d = state.ansDeep;
+  if(d && d.d1){
+    k.분해_방식 = {step:"순서대로 단계", part:"부분·조각으로", case:"사례에 빗대", whole:"통째로 직관"}[d.d1.choice];
+    k.추상_고도 = {big:"큰 방향·비전", mid:"중간 계획·구조", detail:"구체 디테일"}[d.d2.choice];
+    k.최악_상정 = d.d3.choice==="yes" ? "항상 최악부터 상정" : "대체로 긍정 전망";
+    k.절대_원칙 = d.d4.why;
+    k.강점_약점 = d.d5.why;
+    k._meta.source = "5분 퀵 + 심화 라운드 — 초안";
+    k.근거_원문_왜.d1_분해 = d.d1.why; k.근거_원문_왜.d2_추상 = d.d2.why; k.근거_원문_왜.d3_최악 = d.d3.why;
+  }
+  return k;
 }
 
 function renderResult(){
@@ -249,12 +301,17 @@ function renderResult(){
   const k = buildKernel();
   const headline = oneLiner(state.ans);
   const nick = nickname(state.ans);
+  const deepDone = !!(state.ansDeep && state.ansDeep.d1);
   const rows = [
     ["일이 떨어지면 제일 먼저", k.시작_반사], ["'왜?'를 파는 강도", k.왜_반사_강도], ["정보 부족할 때", k.정보_식욕],
     ["모를 때 어떻게", k.불확실성_처리], ["위험 앞에서", k.리스크_자세],
     ["둘 다 못 돌릴 때", `<span class="badge">${k.불가역_tie_break}</span>`],
     ["뭘 먼저 지키나", k.핵심_가치_저울], ["버리는 것 / 지키는 것", k.우선순위_힌트], ["말·글 방식", k.출력_스타일]
   ];
+  if(deepDone){
+    rows.push(["문제 쪼갤 때", k.분해_방식], ["생각 초점", k.추상_고도], ["최악 상정", k.최악_상정],
+      ["절대 원칙", escapeHtml(k.절대_원칙)], ["강점/약점", escapeHtml(k.강점_약점)]);
+  }
   const json = JSON.stringify(k, null, 2);
   const collectOn = COLLECT.mode !== "off";
   stage.innerHTML = `
@@ -267,6 +324,10 @@ function renderResult(){
       <div class="kv">
         ${rows.map(r=>`<div class="row"><div class="k">${r[0]}</div><div class="v">${r[1]}</div></div>`).join('')}
       </div>
+      ${!deepDone ? `
+      <div style="margin:14px 0"><button class="primary" id="deep" style="width:100%">🔬 더 자세히 알아보기 (+5문항 · 약 2분)</button>
+        <div class="hint" style="margin-top:6px">분해 방식·큰그림·최악 상정·절대 원칙·강점까지 더 물어 커널을 정교하게 만듭니다.</div></div>` : `
+      <div class="hint" style="margin:10px 0">🔬 심화 5문항 반영됨 — 더 정교한 초안입니다.</div>`}
       ${collectOn ? `
       <div class="collect">
         <label class="consent">
@@ -301,7 +362,9 @@ function renderResult(){
     const u = URL.createObjectURL(b); const a2 = document.createElement('a');
     a2.href=u; a2.download="kernel-draft.json"; a2.click(); URL.revokeObjectURL(u);
   };
-  document.getElementById('again').onclick = ()=>{ state.i=0; state.ans={}; render(); };
+  document.getElementById('again').onclick = ()=>{ state.i=0; state.phase="quick"; state.ans={}; state.ansDeep={}; render(); };
+  const deepBtn = document.getElementById('deep');
+  if(deepBtn) deepBtn.onclick = ()=>{ state.phase="deep"; state.i=0; render(); };
 
   if(collectOn){
     const ppO=document.getElementById('ppOpen'); if(ppO) ppO.onclick=()=>document.getElementById('ppModal').classList.add('show');
