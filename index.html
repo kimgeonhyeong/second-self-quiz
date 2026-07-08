@@ -119,11 +119,11 @@
    mode: "formspree" | "supabase" | "webhook" | "off"
    ========================================================================= */
 const COLLECT = {
-  mode: "formspree",
+  mode: "supabase",
   // ── Formspree(가장 쉬움): formspree.io → New form → 엔드포인트 https://formspree.io/f/XXXXXXXX 의 XXXXXXXX
   formspreeId: "xvzjnqqq",
-  // ── Supabase: 프로젝트 URL / anon key / 테이블명 (README의 테이블·RLS 참고)
-  supabaseUrl: "", supabaseKey: "", table: "kernels",
+  // ── Supabase: 프로젝트 URL / publishable(=anon, 공개용) key / 테이블명. RLS insert-only 필수. (secret 키는 절대 금지)
+  supabaseUrl: "https://gcqtuuurezynqtsjigvk.supabase.co", supabaseKey: "sb_publishable_GYTE0oT61ZtnkXS6f6xPgA_kNp5LX0E", table: "kernels",
   // ── 임의 웹훅(예: Google Apps Script): POST JSON 받는 URL
   webhookUrl: ""
 };
