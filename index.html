@@ -281,6 +281,7 @@ function buildKernel(){
     시작_반사:start, 왜_반사_강도:whyReflex, 정보_식욕:infoAppetite, 불확실성_처리:uncertainty,
     리스크_자세:risk, 불가역_tie_break:tie, 핵심_가치_저울:dropMap.tilt,
     우선순위_힌트:dropMap.hint, 출력_스타일:outStyle,
+    관통원리_본인작성: state.userAxis || null, 관통원리_차이: null,
     근거_원문_왜:{ q1_시작반사:a.q1.why, q2_정보식욕:a.q2.why, q3_리스크:a.q3.why, q4_tiebreak:a.q4.why, q5_가치저울:a.q5.why }
   };
   const d = state.ansDeep;
@@ -298,6 +299,29 @@ function buildKernel(){
 
 function renderResult(){
   prog.style.width = "100%";
+  // ── 바넘 차단(김건형 확정): 시스템 요약 전에, 사용자가 먼저 공통 축을 귀납하게 한다 ──
+  if(!state.userAxisDone){
+    const a = state.ans;
+    const whys = [["Q1",a.q1&&a.q1.why],["Q2",a.q2&&a.q2.why],["Q3",a.q3&&a.q3.why],["Q4",a.q4&&a.q4.why],["Q5",a.q5&&a.q5.why]].filter(x=>x[1]);
+    stage.innerHTML = `
+      <div class="card result">
+        <h2>🧩 마지막 한 걸음 — 당신 눈으로 먼저</h2>
+        <p class="sub">시스템 요약은 그다음에 보여드려요. 먼저 당신이 쓴 "왜"를 보고 직접 뽑아보세요.</p>
+        <div class="kv" style="margin-bottom:16px">
+          ${whys.map(([q,w])=>`<div class="row"><div class="k">${q} 왜</div><div class="v">${escapeHtml(w)}</div></div>`).join('')}
+        </div>
+        <label class="why">이 다섯에 <b>공통으로 흐르는 논리</b>를 한 줄로 써보세요. <span class="hint">— 당신의 관통원리 후보 (필수)</span></label>
+        <textarea id="userAxis" placeholder="예) 되돌릴 수 없는 건 미리 지킨다 / 확인이 먼저다 / 속도보다 정확">${state.userAxis||""}</textarea>
+        <div class="err" id="err"></div>
+        <div class="nav"><button class="ghost"></button><button class="primary" id="axisNext">확인 → 시스템 요약 보기</button></div>
+      </div>`;
+    document.getElementById('axisNext').onclick = ()=>{
+      const v = document.getElementById('userAxis').value.trim();
+      if(v.length < 4){ document.getElementById('err').textContent = "한 줄 적어주세요 — 여기서 진짜 축이 나옵니다."; return; }
+      state.userAxis = v; state.userAxisDone = true; renderResult();
+    };
+    return;
+  }
   const k = buildKernel();
   const headline = oneLiner(state.ans);
   const nick = nickname(state.ans);
@@ -319,9 +343,17 @@ function renderResult(){
       <p class="sub">5문항으로 뽑은 당신의 결정 방식이에요. 맞는지 훑고, 공유하거나 저장해보세요.</p>
       <div class="nick"><span class="emoji">${nick.emoji}</span><span>${nick.label}</span></div>
       <div style="font-size:21px;font-weight:750;letter-spacing:-.4px;margin:2px 0 4px">"${headline}"</div>
-      <div class="hint" style="margin:0 0 18px">5문항 초안이에요 · 실제 결정을 쌓으면 더 정교해집니다</div>
+      <div class="hint" style="margin:0 0 14px">5문항 초안이에요 · 실제 결정을 쌓으면 더 정교해집니다</div>
+      <div style="margin:0 0 16px;padding:12px 14px;background:#161922;border:1px solid var(--accent2);border-radius:12px">
+        <div class="hint" style="margin-bottom:4px">🧩 당신이 직접 뽑은 한 줄 (관통원리 후보)</div>
+        <div style="font-size:16px;font-weight:700">"${escapeHtml(state.userAxis)}"</div>
+      </div>
       <div class="kv">
         ${rows.map(r=>`<div class="row"><div class="k">${r[0]}</div><div class="v">${r[1]}</div></div>`).join('')}
+      </div>
+      <div style="margin:14px 0 4px">
+        <label class="why" style="font-weight:600">위 시스템 요약과 <b>당신 한 줄</b>이 다른 부분이 있다면? <span class="hint">(선택 — 어긋나는 지점이 진짜 축에 가깝습니다)</span></label>
+        <textarea id="axisDiff" placeholder="다르면 어디가 다른지 한 줄 — 없으면 비워두세요">${state.axisDiff||""}</textarea>
       </div>
       ${!deepDone ? `
       <div style="margin:14px 0"><button class="primary" id="deep" style="width:100%">🔬 더 자세히 알아보기 (+5문항 · 약 2분)</button>
@@ -331,7 +363,7 @@ function renderResult(){
       <div class="collect">
         <label class="consent">
           <input type="checkbox" id="consent">
-          <span><b>익명</b>으로 이 커널 초안을 저장하는 데 동의합니다. 목적: 커널 품질 개선. 항목: 위 5개 선택·"왜" 답변(식별정보 없음). 제출 후 받는 <b>삭제 코드</b>로 언제든 삭제 요청할 수 있습니다.</span>
+          <span><b>익명</b>으로 이 커널 초안을 저장하는 데 동의합니다. 목적: 커널 품질 개선. 항목: 위 선택·"왜" 답변 + 당신이 직접 쓴 한 줄(관통원리 후보·대조)(식별정보 없음). 제출 후 받는 <b>삭제 코드</b>로 언제든 삭제 요청할 수 있습니다.</span>
         </label>
         <button type="button" class="pplink" id="ppOpen">개인정보 수집·이용 고지 보기</button>
         <div style="margin-top:12px"><button class="primary" id="submit">익명으로 제출하기</button></div>
@@ -352,7 +384,7 @@ function renderResult(){
     const txt = `[내 판단 방식] ${nick.emoji} ${nick.label} (초안)\n\n일이 떨어지면: ${k.시작_반사}\n모를 때: ${k.불확실성_처리}\n위험 앞에서: ${k.리스크_자세}\n버리는 것 → 지키는 것: ${k.우선순위_힌트}\n\n— "${headline}"\n(초안 · 실제 결정으로 다듬어집니다)`;
     navigator.clipboard.writeText(txt).then(()=>toast("판단 방식 복사됨"));
   };
-  document.getElementById('again').onclick = ()=>{ state.i=0; state.phase="quick"; state.ans={}; state.ansDeep={}; render(); };
+  document.getElementById('again').onclick = ()=>{ state.i=0; state.phase="quick"; state.ans={}; state.ansDeep={}; state.userAxis=""; state.userAxisDone=false; state.axisDiff=""; render(); };
   const deepBtn = document.getElementById('deep');
   if(deepBtn) deepBtn.onclick = ()=>{ state.phase="deep"; state.i=0; render(); };
 
@@ -361,6 +393,7 @@ function renderResult(){
     document.getElementById('submit').onclick = async ()=>{
       const st = document.getElementById('subStatus');
       if(!document.getElementById('consent').checked){ st.style.color="var(--warn)"; st.textContent="저장 동의에 체크해주세요."; return; }
+      const _ad = document.getElementById('axisDiff'); if(_ad){ state.axisDiff = _ad.value.trim(); k.관통원리_차이 = state.axisDiff || null; }
       const token = "del-" + (crypto.randomUUID ? crypto.randomUUID().slice(0,8) : Math.random().toString(36).slice(2,10));
       const btn = document.getElementById('submit'); btn.disabled = true;
       st.style.color="var(--muted)"; st.textContent="전송 중…";
