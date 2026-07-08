@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Second Self · 5분 커널 퀴즈</title>
+<style>
+  :root{
+    --bg:#0e0f13; --card:#181a21; --line:#272a33; --fg:#e8eaf0; --muted:#9aa0ad;
+    --accent:#6c8cff; --accent2:#3a4a8f; --ok:#3ecf8e; --warn:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:680px;margin:0 auto;padding:32px 20px 80px}
+  header h1{font-size:20px;margin:0 0 4px;letter-spacing:-.3px}
+  header p{color:var(--muted);margin:0 0 24px;font-size:14px}
+  .bar{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin-bottom:28px}
+  .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width .35s}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px 24px}
+  .qnum{color:var(--accent);font-weight:600;font-size:13px;letter-spacing:.5px}
+  .qtitle{font-size:18px;font-weight:650;margin:6px 0 4px;letter-spacing:-.2px}
+  .scenario{color:var(--muted);font-size:14px;margin:0 0 18px}
+  .opts{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+  .opt{border:1px solid var(--line);background:#1e212a;border-radius:12px;padding:13px 15px;cursor:pointer;
+    display:flex;align-items:center;gap:12px;transition:.15s;font-size:15px}
+  .opt:hover{border-color:var(--accent2)}
+  .opt.sel{border-color:var(--accent);background:#232842}
+  .opt .dot{width:18px;height:18px;border-radius:50%;border:2px solid var(--muted);flex:none;transition:.15s}
+  .opt.sel .dot{border-color:var(--accent);background:var(--accent);box-shadow:inset 0 0 0 3px var(--card)}
+  label.why{display:block;font-size:14px;font-weight:600;margin:0 0 8px}
+  label.why span{color:var(--accent);font-weight:700}
+  .hint{color:var(--muted);font-size:12.5px;font-weight:400}
+  textarea{width:100%;min-height:74px;background:#1e212a;border:1px solid var(--line);border-radius:12px;
+    color:var(--fg);padding:12px 14px;font:inherit;font-size:15px;resize:vertical}
+  textarea:focus{outline:none;border-color:var(--accent)}
+  .err{color:var(--warn);font-size:13px;margin-top:8px;min-height:18px}
+  .nav{display:flex;justify-content:space-between;margin-top:22px;gap:12px}
+  button{font:inherit;font-size:15px;font-weight:600;border-radius:12px;padding:12px 22px;cursor:pointer;border:1px solid var(--line);
+    background:#1e212a;color:var(--fg);transition:.15s}
+  button:hover{border-color:var(--accent2)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#0e0f13}
+  button.primary:hover{filter:brightness(1.08)}
+  button.ghost{visibility:hidden}
+  /* result */
+  .result h2{font-size:18px;margin:0 0 2px}
+  .result .sub{color:var(--muted);font-size:13.5px;margin:0 0 20px}
+  .kv{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:18px}
+  .kv .row{display:flex;gap:0;border-top:1px solid var(--line);font-size:14px}
+  .kv .row:first-child{border-top:none}
+  .kv .k{background:#1e212a;color:var(--muted);padding:10px 14px;width:150px;flex:none;font-weight:600}
+  .kv .v{padding:10px 14px}
+  .badge{display:inline-block;background:#232842;border:1px solid var(--accent2);color:var(--accent);
+    border-radius:99px;padding:1px 10px;font-size:12.5px;font-weight:600}
+  pre{background:#12141a;border:1px solid var(--line);border-radius:12px;padding:16px;overflow:auto;
+    font-size:12.5px;color:#cdd3e0;max-height:340px}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
+  .note{color:var(--muted);font-size:12.5px;border-left:3px solid var(--accent2);padding:8px 0 8px 12px;margin-top:16px}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;
+    background:var(--ok);color:#0e0f13;font-weight:700;padding:10px 18px;border-radius:10px;transition:.25s;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🧠 Second Self · 5분 커널 퀴즈</h1>
+    <p>선택하고 <b>왜</b>를 한 줄로. 그 "왜"가 당신 판단 방식의 본체입니다. (5문항 · 약 5분)</p>
+  </header>
+  <div class="bar"><i id="prog"></i></div>
+  <div id="stage"></div>
+</div>
+<div class="toast" id="toast">복사됨</div>
+
+<script>
+const QUESTIONS = [
+  {
+    id:"q1", axis:"시작 반사 + 왜-반사 강도",
+    title:"일이 툭 떨어졌을 때, 제일 먼저 뜨는 것",
+    scenario:"누가 갑자기 '이것 좀 해줘'라고 일을 던진다. 머릿속에 제일 먼저 뜨는 건?",
+    options:[
+      {v:"goal", t:"결과물이 어떤 모습이어야 하는지 (목표부터)"},
+      {v:"cause",t:"이걸 왜 원하지·진짜 문제가 뭔지 (원인부터)"},
+      {v:"limit",t:"뭘 건드리면 안 되나·리스크 (제약부터)"}
+    ],
+    why:"왜 그게 먼저 떠요?"
+  },
+  {
+    id:"q2", axis:"정보 식욕 (속도 ↔ 확실성)",
+    title:"정보 60%, 마감은 내일",
+    scenario:"필요한 정보의 60%만 있는데 마감이 내일이다. 지금?",
+    options:[
+      {v:"speed", t:"있는 걸로 결정하고 간다"},
+      {v:"certain",t:"부족한 걸 확인하고, 마감을 미루더라도 채운다"}
+    ],
+    why:"왜? 그리고 반대로 갈 때는 언제예요?"
+  },
+  {
+    id:"q3", axis:"리스크 자세 + 되돌림 가중치",
+    title:"되돌릴 수 없는 큰 것 vs 되돌릴 수 있는 작은 것",
+    scenario:"하나만. A: 효과 크지만 한 번 하면 되돌릴 수 없다. B: 효과 작지만 언제든 되돌릴 수 있다.",
+    options:[
+      {v:"aggressive",t:"A — 되돌릴 수 없어도 효과 큰 쪽"},
+      {v:"conservative",t:"B — 효과 작아도 되돌릴 수 있는 쪽"}
+    ],
+    why:"왜? 그리고 그게 '돈·신뢰·데이터'처럼 영영 사라지는 거라면 답이 바뀌나요?"
+  },
+  {
+    id:"q4", axis:"불가역 tie-break (최고 신호)",
+    title:"둘 다 되돌릴 수 없을 때",
+    scenario:"둘 다 되돌릴 수 없다. A: 지금 새고 있는 손실을 당장 막기. B: 아직 안 터졌지만 터지면 더 큰 잠재 리스크를 예방하기.",
+    options:[
+      {v:"stop_loss",t:"A — 지금 새는 손실부터 막는다"},
+      {v:"prevent",  t:"B — 더 큰 잠재 리스크를 먼저 예방한다"}
+    ],
+    why:"왜? 금액이 비슷해도 같나요?"
+  },
+  {
+    id:"q5", axis:"핵심 가치 저울 + 우선순위 + 레드라인",
+    title:"품질·속도·비용, 하나는 버려야 한다면",
+    scenario:"셋 다 못 지킨다. 하나 버려야 하면?",
+    options:[
+      {v:"drop_quality",t:"품질을 버린다"},
+      {v:"drop_speed",  t:"속도를 버린다"},
+      {v:"drop_cost",   t:"비용을 버린다"}
+    ],
+    why:"왜 그걸 버려요? 반대로 절대 못 버리는 하나는?"
+  }
+];
+
+const state = {i:0, ans:{}}; // ans[qid] = {choice, why}
+
+const stage = document.getElementById('stage');
+const prog  = document.getElementById('prog');
+
+function render(){
+  prog.style.width = (state.i/QUESTIONS.length*100)+'%';
+  if(state.i >= QUESTIONS.length){ renderResult(); return; }
+  const q = QUESTIONS[state.i];
+  const a = state.ans[q.id] || {choice:null, why:""};
+  stage.innerHTML = `
+    <div class="card">
+      <div class="qnum">Q${state.i+1} / ${QUESTIONS.length} · ${q.axis}</div>
+      <div class="qtitle">${q.title}</div>
+      <p class="scenario">${q.scenario}</p>
+      <div class="opts" id="opts">
+        ${q.options.map(o=>`
+          <div class="opt ${a.choice===o.v?'sel':''}" data-v="${o.v}">
+            <span class="dot"></span><span>${o.t}</span>
+          </div>`).join('')}
+      </div>
+      <label class="why">${q.why} <span>*</span> <span class="hint">— 이 한 줄이 커널의 핵심입니다 (필수)</span></label>
+      <textarea id="why" placeholder="한 줄로 솔직하게…">${a.why||""}</textarea>
+      <div class="err" id="err"></div>
+      <div class="nav">
+        <button class="${state.i===0?'ghost':''}" id="prev">← 이전</button>
+        <button class="primary" id="next">${state.i===QUESTIONS.length-1?'커널 초안 만들기 →':'다음 →'}</button>
+      </div>
+    </div>`;
+
+  stage.querySelectorAll('.opt').forEach(el=>{
+    el.onclick = ()=>{
+      state.ans[q.id] = {choice: el.dataset.v, why: document.getElementById('why').value};
+      stage.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));
+      el.classList.add('sel');
+      document.getElementById('err').textContent = "";
+    };
+  });
+  document.getElementById('prev').onclick = ()=>{ save(q); state.i--; render(); };
+  document.getElementById('next').onclick = ()=>{
+    const why = document.getElementById('why').value.trim();
+    const choice = (state.ans[q.id]||{}).choice;
+    if(!choice){ document.getElementById('err').textContent = "선택지를 하나 골라주세요."; return; }
+    if(why.length < 4){ document.getElementById('err').textContent = "‘왜’를 한 줄 적어주세요 — 여기서 커널이 나옵니다. (스킵 불가)"; return; }
+    save(q); state.i++; render();
+  };
+}
+function save(q){
+  state.ans[q.id] = {
+    choice: (state.ans[q.id]||{}).choice,
+    why: document.getElementById('why') ? document.getElementById('why').value.trim() : (state.ans[q.id]||{}).why
+  };
+}
+
+// ---- 답변 → 커널 스키마 매핑 ----
+function buildKernel(){
+  const a = state.ans;
+  const startMap = {goal:"목표형", cause:"원인형", limit:"제약형"};
+  const start = startMap[a.q1.choice];
+  const whyReflex = a.q1.choice==="cause" ? "상" : (a.q1.choice==="limit" ? "중" : "중/하");
+  const infoAppetite = a.q2.choice==="speed"
+    ? "기본 빠름 — 있는 정보로 실행" : "기본 충분 — 확인 우선, 마감보다 리스크";
+  const uncertainty = a.q2.choice==="speed" ? "추정으로 메우고 진행" : "보류·확인 후 진행";
+  const risk = a.q3.choice==="aggressive"
+    ? "기본 공격 · 되돌림 가중치 낮음" : "기본 보수 · 되돌림 가중치 높음";
+  const tie = a.q4.choice==="stop_loss"
+    ? "진행 중 손실 차단 우선" : "잠재 리스크 예방 우선";
+  const dropMap = {
+    drop_quality:{keep:"속도·비용", tilt:"속도·비용으로 기욺(품질은 회복 가능으로 봄)"},
+    drop_speed:  {keep:"품질·비용", tilt:"품질·비용 우선(속도를 양보)"},
+    drop_cost:   {keep:"품질·속도", tilt:"품질·속도 우선(비용을 양보)"}
+  };
+  const drop = dropMap[a.q5.choice];
+
+  // 출력 스타일: '왜' 답변 평균 길이로 수동 추론
+  const whys = [a.q1.why,a.q2.why,a.q3.why,a.q4.why,a.q5.why];
+  const avg = whys.reduce((s,w)=>s+w.length,0)/whys.length;
+  const outStyle = avg < 45 ? "결론 먼저 · 짧고 건조" : "배경·맥락을 곁들인 서사형";
+
+  return {
+    _meta:{
+      source:"5분 압축 퀴즈(입구 시드) — 초안",
+      confirmed:false,
+      note:"본인 확인 전 = 초안. 고강도 위임 금지. 깊이는 이후 실제 결정의 수동 관찰(L2)로 채운다.",
+      generated_at:new Date().toISOString()
+    },
+    시작_반사:start,
+    왜_반사_강도:whyReflex,
+    정보_식욕:infoAppetite,
+    불확실성_처리:uncertainty,
+    리스크_자세:risk,
+    불가역_tie_break:tie,
+    핵심_가치_저울:drop.tilt,
+    우선순위_힌트:"버리는 것="+({drop_quality:"품질",drop_speed:"속도",drop_cost:"비용"})[a.q5.choice]+" / 지키는 것="+drop.keep,
+    출력_스타일:outStyle,
+    근거_원문_왜:{
+      q1_시작반사:a.q1.why, q2_정보식욕:a.q2.why, q3_리스크:a.q3.why,
+      q4_tiebreak:a.q4.why, q5_가치저울:a.q5.why
+    }
+  };
+}
+
+function renderResult(){
+  prog.style.width = "100%";
+  const k = buildKernel();
+  const rows = [
+    ["시작 반사", k.시작_반사],
+    ["왜-반사 강도", k.왜_반사_강도],
+    ["정보 식욕", k.정보_식욕],
+    ["불확실성 처리", k.불확실성_처리],
+    ["리스크 자세", k.리스크_자세],
+    ["불가역 tie-break", `<span class="badge">${k.불가역_tie_break}</span>`],
+    ["핵심 가치 저울", k.핵심_가치_저울],
+    ["우선순위 힌트", k.우선순위_힌트],
+    ["출력 스타일", k.출력_스타일]
+  ];
+  const json = JSON.stringify(k, null, 2);
+  stage.innerHTML = `
+    <div class="card result">
+      <h2>✅ 커널 초안 생성됨 <span class="badge">초안 · 미확인</span></h2>
+      <p class="sub">5문항 시드에서 뽑은 판단 방식입니다. 맞는지 훑고, JSON을 저장하세요.</p>
+      <div class="kv">
+        ${rows.map(r=>`<div class="row"><div class="k">${r[0]}</div><div class="v">${r[1]}</div></div>`).join('')}
+      </div>
+      <div class="actions">
+        <button class="primary" id="copy">JSON 복사</button>
+        <button id="dl">JSON 다운로드</button>
+        <button id="again">다시 하기</button>
+      </div>
+      <pre id="json">${escapeHtml(json)}</pre>
+      <div class="note">
+        이건 <b>입구 시드(초안)</b>입니다. 스키마 규칙상 <b>본인 확인 전 커널은 초안</b> — 위임 강도를 낮게 두세요.
+        진짜 해자(개인 캘리브레이션)는 이후 <b>실제 결정의 수락·오버라이드·결과를 수동 관찰</b>로 누적해 채웁니다.
+        운영에선 이 5답 원문("왜")을 LLM에 넘겨 커널 필드를 더 정교하게 다듬습니다.
+      </div>
+    </div>`;
+  document.getElementById('copy').onclick = ()=>{ navigator.clipboard.writeText(json).then(()=>toast()); };
+  document.getElementById('dl').onclick = ()=>{
+    const b = new Blob([json], {type:"application/json"});
+    const u = URL.createObjectURL(b); const a2 = document.createElement('a');
+    a2.href=u; a2.download="kernel-draft.json"; a2.click(); URL.revokeObjectURL(u);
+  };
+  document.getElementById('again').onclick = ()=>{ state.i=0; state.ans={}; render(); };
+}
+
+function escapeHtml(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function toast(){const t=document.getElementById('toast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1400);}
+
+render();
+</script>
+</body>
+</html>
