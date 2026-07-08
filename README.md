@@ -29,7 +29,7 @@
    create table kernels (
      id uuid primary key default gen_random_uuid(),
      created_at timestamptz default now(),
-     email text,
+     deletion_token text,
      kernel jsonb
    );
    alter table kernels enable row level security;
