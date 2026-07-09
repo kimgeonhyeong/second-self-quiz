@@ -173,6 +173,7 @@
   .fx .twinkle.go{animation:fxtwinkle 2.5s ease-in-out forwards}
   @keyframes fxtwinkle{0%,100%{opacity:0;transform:scale(.4)}45%{opacity:1;transform:scale(1)}}
 </style>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 </head>
 <body>
 <div class="wrap">
@@ -185,7 +186,7 @@
 
 <div class="modal" id="ppModal"><div class="box">
   <h3>개인정보 수집·이용 고지</h3>
-  <p class="eff">시행일 2026-07-08 · 이 게임은 사고 커널(판단 방식) 연구·개선을 위해 아래와 같이 데이터를 처리합니다.</p>
+  <p class="eff">시행일 2026-07-09 · 이 게임은 사고 커널(판단 방식) 연구·개선을 위해 아래와 같이 데이터를 처리합니다.</p>
   <h4>1. 수집 항목 (익명)</h4>
   <ul>
     <li>각 결정의 선택값, "왜" 칩/자유서술, 결정에 걸린 시간(ms)</li>
@@ -197,7 +198,10 @@
   <h4>3. 보유·이용 기간</h4>
   <p>수집일로부터 12개월 또는 목적 달성 시까지 보유 후 파기.</p>
   <h4>4. 처리 위탁·국외 이전</h4>
-  <p>응답은 폼 처리 서비스(Supabase 등)에 저장될 수 있으며, 데이터가 국외 서버에 보관될 수 있습니다.</p>
+  <ul>
+    <li><b>저장</b>: Supabase Inc. — <b>싱가포르(ap-southeast-1)</b> 서버에 저장됩니다(국외 이전). 목적: 커널 초안 저장 · 보유: 위 3항과 동일.</li>
+    <li><b>봇 방지</b>: Cloudflare Turnstile — 어뷰즈 방지를 위해 요청 IP를 전송하며, 당사는 <b>저장하지 않습니다</b>.</li>
+  </ul>
   <h4>5. 동의 거부 권리</h4>
   <p>동의하지 않을 수 있으며, 이 경우 제출만 되지 않습니다. 결과(커널 초안)는 본인 기기에서 그대로 확인·복사할 수 있습니다.</p>
   <h4>6. 삭제 등 권리</h4>
@@ -215,7 +219,11 @@
    mode: "supabase" | "formspree" | "webhook" | "off"
    ========================================================================= */
 const COLLECT = {
-  mode: "supabase",
+  mode: "edge",
+  edgeUrl: "https://gcqtuuurezynqtsjigvk.supabase.co/functions/v1/submit-kernel",
+  anonKey: "sb_publishable_GYTE0oT61ZtnkXS6f6xPgA_kNp5LX0E",  // 게이트웨이 통과용(공개 정상)
+  turnstileSiteKey: "0x4AAAAAADyRlWI-5Y2K2YHI",              // Cloudflare Turnstile Site Key (공개용)
+  // ── 이하 레거시(edge 모드에선 미사용, 참고용) ──
   formspreeId: "xvzjnqqq",
   supabaseUrl: "https://gcqtuuurezynqtsjigvk.supabase.co",
   supabaseKey: "sb_publishable_GYTE0oT61ZtnkXS6f6xPgA_kNp5LX0E",
@@ -500,6 +508,7 @@ function renderResult(){
           <span><b>익명</b>으로 이 커널 초안을 저장하는 데 동의합니다. 목적: 커널 품질 개선. 항목: 위 선택·"왜"·결정 시간 + 직접 쓴 한 줄(식별정보 없음). <b>삭제 코드</b>로 언제든 삭제 요청 가능.</span>
         </label>
         <button type="button" class="pplink" id="ppOpen">개인정보 수집·이용 고지 보기</button>
+        <div id="cf-turnstile" style="margin:10px 0"></div>
         <div style="margin-top:12px"><button class="primary" id="submit">익명으로 제출</button></div>
         <div class="substatus" id="subStatus"></div>
       </div>` : ``}
@@ -524,23 +533,49 @@ function renderResult(){
 
   if(collectOn){
     const ppO=document.getElementById('ppOpen'); if(ppO) ppO.onclick=()=>document.getElementById('ppModal').classList.add('show');
+
+    // 캡차 위젯 렌더 (스크립트 로드 타이밍 대비 폴링)
+    const mountCaptcha = ()=>{
+      if(window.turnstile && COLLECT.turnstileSiteKey){
+        try{ state._cfWidget = turnstile.render('#cf-turnstile', { sitekey: COLLECT.turnstileSiteKey, theme:'dark' }); }catch(_){}
+      } else { setTimeout(mountCaptcha, 200); }
+    };
+    if(COLLECT.mode==="edge") mountCaptcha();
+
     document.getElementById('submit').onclick = async ()=>{
       const st = document.getElementById('subStatus');
       if(!document.getElementById('consent').checked){ st.style.color="var(--warn)"; st.textContent="저장 동의에 체크해주세요."; return; }
+      let cfToken = "";
+      if(COLLECT.mode==="edge"){
+        cfToken = (window.turnstile && state._cfWidget!=null) ? turnstile.getResponse(state._cfWidget) : "";
+        if(!cfToken){ st.style.color="var(--warn)"; st.textContent="사람 확인(캡차)을 완료해주세요."; return; }
+      }
       const ad=document.getElementById('axisDiff'); state.axisDiff = ad?ad.value.trim():""; k.관통원리_차이 = state.axisDiff || null;
       const token = "del-" + (crypto.randomUUID ? crypto.randomUUID().slice(0,8) : Math.random().toString(36).slice(2,10));
       const btn = document.getElementById('submit'); btn.disabled = true;
       st.style.color="var(--muted)"; st.textContent="전송 중…";
-      try{ await submitKernel(k, token);
+      try{ await submitKernel(k, token, cfToken);
         st.style.color="var(--ok)"; st.innerHTML = "✅ 익명 제출됐습니다. 삭제 코드: <b>"+token+"</b> 보관하세요.";
         btn.textContent="제출 완료";
-      }catch(e){ btn.disabled=false; st.style.color="var(--warn)";
+      }catch(e){ btn.disabled=false;
+        if(COLLECT.mode==="edge" && window.turnstile && state._cfWidget!=null){ try{ turnstile.reset(state._cfWidget); }catch(_){} }
+        st.style.color="var(--warn)";
         st.textContent = (e && e.config) ? "수집 미설정: COLLECT에 엔드포인트를 넣으세요." : "전송 실패: "+(e&&e.message?e.message:e); }
     };
   }
 }
 
-async function submitKernel(kernel, deletionToken){
+async function submitKernel(kernel, deletionToken, cfToken){
+  if(COLLECT.mode==="edge"){
+    if(!COLLECT.edgeUrl) throw {config:true};
+    const res = await fetch(COLLECT.edgeUrl, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "apikey":COLLECT.anonKey, "Authorization":"Bearer "+COLLECT.anonKey },
+      body: JSON.stringify({ kernel: kernel, deletion_token: deletionToken, turnstile_token: cfToken })
+    });
+    if(!res.ok) throw new Error("HTTP "+res.status+" "+(await res.text().catch(()=>"")));
+    return true;
+  }
   if(COLLECT.mode==="supabase"){
     if(!COLLECT.supabaseUrl || !COLLECT.supabaseKey) throw {config:true};
     const res = await fetch(COLLECT.supabaseUrl.replace(/\/$/,"")+"/rest/v1/"+COLLECT.table, {
