@@ -461,19 +461,19 @@ function renderDeepCard(){
   const q = DEEP[state.di]; const d = state.deep;
   drawDeepPips();
   timerEl.innerHTML = `🔬 심화 <b>${state.di+1}</b>/${DEEP.length}`;
-  if(q.type){ // 자유서술 카드 (소프트 타이머, 막지 않음)
+  if(q.type){ // 자유서술 카드 (시간제한 없음)
+    stopCountdown();
+    timerEl.innerHTML = `🔬 심화 <b>${state.di+1}</b>/${DEEP.length} <span style="opacity:.6;font-weight:400">· 시간제한 없음</span>`;
     stage.innerHTML = `
       <div class="gcard">
         <div class="qmeta">🔬 ${q.axis}</div>
         <div class="qtitle">${q.title}</div>
         <p class="scenario">${q.scenario}</p>
-        <div class="tlimit" id="tlimit"><i></i></div>
         <input type="text" id="dt1" maxlength="${q.type==="text2"?100:120}" placeholder="${q.type==="text2"?q.ph1:q.ph} (선택 · 개인정보 X)" value="${escapeHtml(q.type==="text2"?(d.강점||''):(d.절대_원칙||''))}">
         ${q.type==="text2"?`<input type="text" id="dt2" maxlength="100" placeholder="${q.ph2} (선택)" value="${escapeHtml(d.약점||'')}" style="margin-top:8px">`:''}
-        <div class="mini" style="margin-top:8px">비워도 됩니다. 넘기면 '미채굴'로 남아요.</div>
+        <div class="mini" style="margin-top:8px">시간제한 없음 · 비워도 됩니다(넘기면 '미채굴').</div>
         <div style="margin-top:8px"><button class="primary" id="dNext">다음 →</button></div>
       </div>`;
-    state.tStart = performance.now(); startCountdown();
     const go = ()=>{
       if(q.type==="text2"){ d.강점=(document.getElementById('dt1').value||'').trim(); d.약점=(document.getElementById('dt2').value||'').trim(); }
       else { d.절대_원칙=(document.getElementById('dt1').value||'').trim(); }
