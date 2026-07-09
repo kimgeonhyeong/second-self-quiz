@@ -416,9 +416,9 @@ function renderFork(){
   stage.innerHTML = `
     <div class="result">
       <h2>✅ 5개 결정 끝</h2>
-      <p style="color:var(--muted);font-size:13.5px;margin:2px 0 20px">여기서 <b style="color:var(--fg)">결과</b>를 봐도 되고, <b style="color:var(--gold)">심화 5문</b>을 더 하면 분해·초점·최악상정·레드라인·강약점까지 커널이 깊어집니다. (문항당 8초, 소프트)</p>
+      <p style="color:var(--muted);font-size:13.5px;margin:2px 0 20px">여기서 <b style="color:var(--fg)">결과</b>를 봐도 되고, <b style="color:var(--gold)">심화 3문</b>을 더 하면 분해 방식·레드라인·강약점까지 커널이 깊어집니다.</p>
       <div style="display:flex;flex-direction:column;gap:10px;max-width:340px;margin:0 auto">
-        <button class="primary big" id="goDeep">🔬 심화 더 하기 <span style="font-weight:400;opacity:.8">(+5문 · 문항당 8초)</span></button>
+        <button class="primary big" id="goDeep">🔬 심화 더 하기 <span style="font-weight:400;opacity:.8">(+3문)</span></button>
         <button id="goResult">결과만 보기 →</button>
       </div>
     </div>`;
@@ -435,17 +435,6 @@ const DEEP = [
       "순서대로 하나씩 쪼갠다":["순서가 편해","단계로 풀어야","하나씩 확실히"],
       "조각조각 나눠서 각각 본다":["나눠야 보여","부분부터","각개격파"],
       "비슷한 예시로 빗대어 푼다":["빗대면 쉬워","경험으로 유추","패턴으로"] } },
-  { id:"추상_고도", why:"d2_추상", axis:"초점 높이", title:"생각의 초점", scenario:"머릿속 초점이 주로 어디에 가 있나?",
-    options:[{v:"큰 그림과 방향에 초점"},{v:"계획과 구조에 초점"},{v:"세부 디테일에 초점"}],
-    whyChips:{
-      "큰 그림과 방향에 초점":["방향이 먼저","숲을 본다","전략부터"],
-      "계획과 구조에 초점":["구조가 중요","설계부터","틀을 짠다"],
-      "세부 디테일에 초점":["디테일이 성패","구체화에 몰입","현장이 중요"] } },
-  { id:"최악_상정", why:"d3_최악", axis:"최악 상정", title:"일을 시작할 때", scenario:"뭔가 시작할 때 머릿속 기본값은?",
-    options:[{v:"항상 최악부터 그려본다"},{v:"대체로 잘 될 거라고 본다"}],
-    whyChips:{
-      "항상 최악부터 그려본다":["최악부터 막는다","대비가 먼저","터지면 끝"],
-      "대체로 잘 될 거라고 본다":["일단 낙관","해보며 고친다","걱정보다 실행"] } },
   { id:"절대_원칙", type:"text", axis:"레드라인", title:"절대 넘지 않는 선", scenario:"무슨 일이 있어도 안 하는 것 하나.", ph:"예) 거짓말로 모면하지 않는다" },
   { id:"강점_약점", type:"text2", axis:"자기 인식", title:"강점 / 약점", scenario:"본인 강점 한 줄, 약점 한 줄.", ph1:"💪 강점 한 줄", ph2:"🩹 약점 한 줄" },
 ];
