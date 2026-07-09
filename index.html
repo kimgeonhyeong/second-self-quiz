@@ -416,9 +416,9 @@ function renderFork(){
   stage.innerHTML = `
     <div class="result">
       <h2>✅ 5개 결정 끝</h2>
-      <p style="color:var(--muted);font-size:13.5px;margin:2px 0 20px">여기서 <b style="color:var(--fg)">결과</b>를 봐도 되고, <b style="color:var(--gold)">심화 5문</b>을 더 하면 분해·초점·최악상정·레드라인·강약점까지 커널이 깊어집니다. (시간제한 없음)</p>
+      <p style="color:var(--muted);font-size:13.5px;margin:2px 0 20px">여기서 <b style="color:var(--fg)">결과</b>를 봐도 되고, <b style="color:var(--gold)">심화 5문</b>을 더 하면 분해·초점·최악상정·레드라인·강약점까지 커널이 깊어집니다. (문항당 8초, 소프트)</p>
       <div style="display:flex;flex-direction:column;gap:10px;max-width:340px;margin:0 auto">
-        <button class="primary big" id="goDeep">🔬 심화 더 하기 <span style="font-weight:400;opacity:.8">(+5문, 약 2분)</span></button>
+        <button class="primary big" id="goDeep">🔬 심화 더 하기 <span style="font-weight:400;opacity:.8">(+5문 · 문항당 8초)</span></button>
         <button id="goResult">결과만 보기 →</button>
       </div>
     </div>`;
@@ -426,50 +426,135 @@ function renderFork(){
   document.getElementById('goResult').onclick = ()=>{ state.deepDone=false; renderResult(); };
 }
 
-/* ── 심화 라운드: convert-kernel 이 아는 심화 필드 수집(선택·무제한) ── */
-function renderDeep(){
-  topbar.style.visibility = "hidden";
-  const d = state.deep = (state.deep || {whys:{}}); d.whys = d.whys || {};
-  const grp = (label, key, why, opts) => `
-    <div style="margin:16px 0 4px;font-size:14px;font-weight:700">${label}</div>
-    <div class="opts">
-      ${opts.map(o=>`<div class="opt dopt ${d[key]===o?'sel':''}" data-key="${escapeHtml(key)}" data-v="${escapeHtml(o)}">${escapeHtml(o)}</div>`).join('')}
-    </div>
-    ${why?`<input type="text" class="dwhy" data-why="${why}" maxlength="80" placeholder="왜? 한 줄 (선택 · 개인정보 X)" value="${escapeHtml(d.whys[why]||'')}" style="margin-top:8px">`:''}`;
+/* ── 심화 라운드: 한 문항씩 + 8초 소프트 컷(메인 카드와 동일 기제) ── */
+const DEEP = [
+  { id:"분해_방식", why:"d1_분해", axis:"문제를 쪼갤 때", title:"복잡한 문제 앞에서", scenario:"복잡한 게 툭 떨어지면, 머리가 먼저 하는 건?",
+    options:[{v:"전체를 한 번에 감으로 잡는다"},{v:"순서대로 하나씩 쪼갠다"},{v:"조각조각 나눠서 각각 본다"},{v:"비슷한 예시로 빗대어 푼다"}],
+    whyChips:{
+      "전체를 한 번에 감으로 잡는다":["감이 먼저","전체 그림부터","통으로 잡아야"],
+      "순서대로 하나씩 쪼갠다":["순서가 편해","단계로 풀어야","하나씩 확실히"],
+      "조각조각 나눠서 각각 본다":["나눠야 보여","부분부터","각개격파"],
+      "비슷한 예시로 빗대어 푼다":["빗대면 쉬워","경험으로 유추","패턴으로"] } },
+  { id:"추상_고도", why:"d2_추상", axis:"초점 높이", title:"생각의 초점", scenario:"머릿속 초점이 주로 어디에 가 있나?",
+    options:[{v:"큰 그림과 방향에 초점"},{v:"계획과 구조에 초점"},{v:"세부 디테일에 초점"}],
+    whyChips:{
+      "큰 그림과 방향에 초점":["방향이 먼저","숲을 본다","전략부터"],
+      "계획과 구조에 초점":["구조가 중요","설계부터","틀을 짠다"],
+      "세부 디테일에 초점":["디테일이 성패","구체화에 몰입","현장이 중요"] } },
+  { id:"최악_상정", why:"d3_최악", axis:"최악 상정", title:"일을 시작할 때", scenario:"뭔가 시작할 때 머릿속 기본값은?",
+    options:[{v:"항상 최악부터 그려본다"},{v:"대체로 잘 될 거라고 본다"}],
+    whyChips:{
+      "항상 최악부터 그려본다":["최악부터 막는다","대비가 먼저","터지면 끝"],
+      "대체로 잘 될 거라고 본다":["일단 낙관","해보며 고친다","걱정보다 실행"] } },
+  { id:"절대_원칙", type:"text", axis:"레드라인", title:"절대 넘지 않는 선", scenario:"무슨 일이 있어도 안 하는 것 하나.", ph:"예) 거짓말로 모면하지 않는다" },
+  { id:"강점_약점", type:"text2", axis:"자기 인식", title:"강점 / 약점", scenario:"본인 강점 한 줄, 약점 한 줄.", ph1:"💪 강점 한 줄", ph2:"🩹 약점 한 줄" },
+];
+
+function renderDeep(){ state.di = 0; state.deep = state.deep || {whys:{}}; state.deep.whys = state.deep.whys || {}; renderDeepCard(); }
+
+function drawDeepPips(){
+  topbar.style.visibility = "visible";
+  pipsEl.innerHTML = DEEP.map((_,idx)=>{ const cls = idx<state.di?"done":(idx===state.di?"on":""); return `<div class="pip ${cls}"></div>`; }).join('');
+}
+
+function renderDeepCard(){
+  const q = DEEP[state.di]; const d = state.deep;
+  drawDeepPips();
+  timerEl.innerHTML = `🔬 심화 <b>${state.di+1}</b>/${DEEP.length}`;
+  if(q.type){ // 자유서술 카드 (소프트 타이머, 막지 않음)
+    stage.innerHTML = `
+      <div class="gcard">
+        <div class="qmeta">🔬 ${q.axis}</div>
+        <div class="qtitle">${q.title}</div>
+        <p class="scenario">${q.scenario}</p>
+        <div class="tlimit" id="tlimit"><i></i></div>
+        <input type="text" id="dt1" maxlength="${q.type==="text2"?100:120}" placeholder="${q.type==="text2"?q.ph1:q.ph} (선택 · 개인정보 X)" value="${escapeHtml(q.type==="text2"?(d.강점||''):(d.절대_원칙||''))}">
+        ${q.type==="text2"?`<input type="text" id="dt2" maxlength="100" placeholder="${q.ph2} (선택)" value="${escapeHtml(d.약점||'')}" style="margin-top:8px">`:''}
+        <div class="mini" style="margin-top:8px">비워도 됩니다. 넘기면 '미채굴'로 남아요.</div>
+        <div style="margin-top:8px"><button class="primary" id="dNext">다음 →</button></div>
+      </div>`;
+    state.tStart = performance.now(); startCountdown();
+    const go = ()=>{
+      if(q.type==="text2"){ d.강점=(document.getElementById('dt1').value||'').trim(); d.약점=(document.getElementById('dt2').value||'').trim(); }
+      else { d.절대_원칙=(document.getElementById('dt1').value||'').trim(); }
+      stopCountdown(); deepAdvance(60);
+    };
+    document.getElementById('dNext').onclick = go;
+    const dt1=document.getElementById('dt1');
+    dt1.onkeydown=e=>{ if(e.key==="Enter" && q.type!=="text2"){ e.preventDefault(); go(); } };
+    dt1.focus();
+    return;
+  }
+  const a = d[q.id]; // 선택 카드 (메인과 동일)
   stage.innerHTML = `
-    <div class="result">
-      <h2>🔬 심화 라운드 <span class="badge">선택 · 시간제한 없음</span></h2>
-      <p style="color:var(--muted);font-size:13px;margin:2px 0 6px">골라만 놔도 되고, "왜"를 채우면 커널이 더 선명해집니다. 빈 항목은 '미채굴'로 남습니다.</p>
-      ${grp("🧩 복잡한 문제를 앞에 두면", "분해_방식", "d1_분해", ["전체를 한 번에 감으로 잡는다","순서대로 하나씩 쪼갠다","조각조각 나눠서 각각 본다","비슷한 예시로 빗대어 푼다"])}
-      ${grp("🔭 생각의 초점은 주로", "추상_고도", "d2_추상", ["큰 그림과 방향에 초점","계획과 구조에 초점","세부 디테일에 초점"])}
-      ${grp("⚠️ 일을 시작할 때", "최악_상정", "d3_최악", ["항상 최악부터 그려본다","대체로 잘 될 거라고 본다"])}
-      <div style="margin:16px 0 4px;font-size:14px;font-weight:700">🚫 절대 넘지 않는 선 (레드라인)</div>
-      <input type="text" id="dPrinciple" maxlength="120" placeholder="예) 거짓말로 모면하지 않는다 (선택)" value="${escapeHtml(d.절대_원칙||'')}">
-      <div style="margin:16px 0 4px;font-size:14px;font-weight:700">💪 강점 / 🩹 약점</div>
-      <input type="text" id="dStrength" maxlength="100" placeholder="강점 한 줄 (선택)" value="${escapeHtml(d.강점||'')}">
-      <input type="text" id="dWeak" maxlength="100" placeholder="약점 한 줄 (선택)" value="${escapeHtml(d.약점||'')}" style="margin-top:6px">
-      <div class="actions" style="margin-top:20px">
-        <button class="primary big" id="deepDone">완료 → 결과 보기</button>
+    <div class="gcard">
+      <div class="qmeta">🔬 ${q.axis}</div>
+      <div class="qtitle">${q.title}</div>
+      <p class="scenario">${q.scenario}</p>
+      <div class="tlimit" id="tlimit"><i></i></div>
+      <div class="opts" id="opts">
+        ${q.options.map(o=>`<div class="opt ${a===o.v?'sel':''}" data-v="${escapeHtml(o.v)}">${escapeHtml(o.v)}</div>`).join('')}
       </div>
+      <div id="whyBox"></div>
     </div>`;
-  stage.querySelectorAll('.dopt').forEach(el=>{
+  state.tStart = performance.now(); startCountdown();
+  stage.querySelectorAll('.opt').forEach(el=>{
     el.onclick = ()=>{
-      const key = el.dataset.key;
-      stage.querySelectorAll('.dopt[data-key="'+key+'"]').forEach(x=>x.classList.remove('sel'));
-      el.classList.add('sel');
-      d[key] = el.dataset.v;
+      if(d[q.id]) return;
+      stopCountdown();
+      d[q.id] = el.dataset.v;
+      const opts=document.getElementById('opts'); opts.classList.add('locked');
+      opts.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel','flash'));
+      el.classList.add('sel','flash');
+      showDeepWhy(q, el.dataset.v);
     };
   });
-  document.getElementById('deepDone').onclick = ()=>{
-    stage.querySelectorAll('.dwhy').forEach(inp=>{ const v=inp.value.trim(); if(v) d.whys[inp.dataset.why]=v; else delete d.whys[inp.dataset.why]; });
-    d.절대_원칙 = (document.getElementById('dPrinciple').value||"").trim();
-    d.강점 = (document.getElementById('dStrength').value||"").trim();
-    d.약점 = (document.getElementById('dWeak').value||"").trim();
-    // 하나라도 채웠으면 심화로 인정, 전부 비면 입구 시드 그대로
-    state.deepDone = !!(d.분해_방식||d.추상_고도||d.최악_상정||d.절대_원칙||d.강점||d.약점);
-    renderResult();
-  };
-  window.scrollTo(0,0);
+}
+
+function showDeepWhy(q, choice){
+  const chips=(q.whyChips[choice]||[]).concat(["✏️ 직접 쓰기"]);
+  const box=document.getElementById('whyBox'); const d=state.deep;
+  const cur=d.whys[q.why]||"";
+  box.innerHTML = `
+    <div class="why">
+      <div class="lead">왜 그렇게 골랐어요? <span>한 번만 더 탭</span></div>
+      <div class="chips" id="chips">
+        ${chips.map((c,idx)=>`<div class="chip ${idx===chips.length-1?'ghost':''}" data-i="${idx}">${c}</div>`).join('')}
+      </div>
+      <div class="freewrap" id="freewrap">
+        <input type="text" id="freewhy" maxlength="80" placeholder="한 줄로… (판단 방식만, 개인정보 X)" value="${cur && !q.whyChips[choice].includes(cur)?escapeHtml(cur):''}">
+        <div class="mini">엔터 또는 아래 버튼으로 다음 →</div>
+        <div style="margin-top:8px"><button class="primary" id="freeNext">이걸로 → 다음</button></div>
+      </div>
+    </div>`;
+  document.querySelector('.gcard').scrollIntoView({behavior:'smooth', block:'end'});
+  const chipEls=box.querySelectorAll('.chip');
+  chipEls.forEach(ch=>{
+    ch.onclick = ()=>{
+      const idx=+ch.dataset.i;
+      if(idx===chips.length-1){ document.getElementById('freewrap').classList.add('show'); chipEls.forEach(x=>x.classList.remove('sel')); ch.style.borderColor="var(--accent)"; setTimeout(()=>document.getElementById('freewhy').focus(),50); return; }
+      d.whys[q.why]=chips[idx];
+      chipEls.forEach(x=>{x.classList.remove('sel');x.style.borderColor="";});
+      ch.style.borderColor="var(--accent)"; ch.style.background="#232842";
+      deepAdvance(180);
+    };
+  });
+  const fn=document.getElementById('freeNext'), fw=document.getElementById('freewhy');
+  const submitFree=()=>{ const v=fw.value.trim(); if(v) d.whys[q.why]=v; deepAdvance(60); };
+  if(fn) fn.onclick=submitFree;
+  if(fw) fw.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); submitFree(); } };
+}
+
+function deepAdvance(delay){
+  stopCountdown();
+  setTimeout(()=>{
+    state.di++;
+    if(state.di >= DEEP.length){
+      const d=state.deep;
+      state.deepDone = !!(d.분해_방식||d.추상_고도||d.최악_상정||d.절대_원칙||d.강점||d.약점);
+      renderResult();
+    } else renderDeepCard();
+  }, delay||140);
 }
 
 /* ── 커널 조립 (kernel-quiz-5min.md 파이프라인과 동일 스키마) ── */
