@@ -262,7 +262,7 @@ const CARDS = [
 const LIMIT_MS = 8000;   // 건마다 결정 제한시간(ms). 소프트 컷: 초과해도 막지 않고, overtime 플래그로 기록.
 let cardTimer = null;
 
-const state = { i:0, ans:{}, tStart:0, done:false, userAxis:"", userAxisDone:false, axisDiff:"" };
+const state = { i:0, ans:{}, tStart:0, done:false, userAxis:"", userAxisDone:false, axisDiff:"", deep:{whys:{}}, deepDone:false };
 const stage = document.getElementById('stage');
 const topbar = document.getElementById('topbar');
 const pipsEl = document.getElementById('pips');
@@ -403,9 +403,73 @@ function advance(delay){
   stopCountdown();
   setTimeout(()=>{
     state.i++;
-    if(state.i >= CARDS.length){ state.done=true; renderResult(); }
+    if(state.i >= CARDS.length){ state.done=true; renderFork(); }
     else renderCard();
   }, delay||120);
+}
+
+/* ── 5카드 후 갈림길: 심화 더 하기 / 결과 보기 ── */
+function renderFork(){
+  drawPips(); document.querySelectorAll('.pip').forEach(p=>p.classList.add('done'));
+  topbar.style.visibility = "visible";
+  timerEl.innerHTML = `5/5 완료`;
+  stage.innerHTML = `
+    <div class="result">
+      <h2>✅ 5개 결정 끝</h2>
+      <p style="color:var(--muted);font-size:13.5px;margin:2px 0 20px">여기서 <b style="color:var(--fg)">결과</b>를 봐도 되고, <b style="color:var(--gold)">심화 5문</b>을 더 하면 분해·초점·최악상정·레드라인·강약점까지 커널이 깊어집니다. (시간제한 없음)</p>
+      <div style="display:flex;flex-direction:column;gap:10px;max-width:340px;margin:0 auto">
+        <button class="primary big" id="goDeep">🔬 심화 더 하기 <span style="font-weight:400;opacity:.8">(+5문, 약 2분)</span></button>
+        <button id="goResult">결과만 보기 →</button>
+      </div>
+    </div>`;
+  document.getElementById('goDeep').onclick = ()=> renderDeep();
+  document.getElementById('goResult').onclick = ()=>{ state.deepDone=false; renderResult(); };
+}
+
+/* ── 심화 라운드: convert-kernel 이 아는 심화 필드 수집(선택·무제한) ── */
+function renderDeep(){
+  topbar.style.visibility = "hidden";
+  const d = state.deep = (state.deep || {whys:{}}); d.whys = d.whys || {};
+  const grp = (label, key, why, opts) => `
+    <div style="margin:16px 0 4px;font-size:14px;font-weight:700">${label}</div>
+    <div class="opts">
+      ${opts.map(o=>`<div class="opt dopt ${d[key]===o?'sel':''}" data-key="${escapeHtml(key)}" data-v="${escapeHtml(o)}">${escapeHtml(o)}</div>`).join('')}
+    </div>
+    ${why?`<input type="text" class="dwhy" data-why="${why}" maxlength="80" placeholder="왜? 한 줄 (선택 · 개인정보 X)" value="${escapeHtml(d.whys[why]||'')}" style="margin-top:8px">`:''}`;
+  stage.innerHTML = `
+    <div class="result">
+      <h2>🔬 심화 라운드 <span class="badge">선택 · 시간제한 없음</span></h2>
+      <p style="color:var(--muted);font-size:13px;margin:2px 0 6px">골라만 놔도 되고, "왜"를 채우면 커널이 더 선명해집니다. 빈 항목은 '미채굴'로 남습니다.</p>
+      ${grp("🧩 복잡한 문제를 앞에 두면", "분해_방식", "d1_분해", ["전체를 한 번에 감으로 잡는다","순서대로 하나씩 쪼갠다","조각조각 나눠서 각각 본다","비슷한 예시로 빗대어 푼다"])}
+      ${grp("🔭 생각의 초점은 주로", "추상_고도", "d2_추상", ["큰 그림과 방향에 초점","계획과 구조에 초점","세부 디테일에 초점"])}
+      ${grp("⚠️ 일을 시작할 때", "최악_상정", "d3_최악", ["항상 최악부터 그려본다","대체로 잘 될 거라고 본다"])}
+      <div style="margin:16px 0 4px;font-size:14px;font-weight:700">🚫 절대 넘지 않는 선 (레드라인)</div>
+      <input type="text" id="dPrinciple" maxlength="120" placeholder="예) 거짓말로 모면하지 않는다 (선택)" value="${escapeHtml(d.절대_원칙||'')}">
+      <div style="margin:16px 0 4px;font-size:14px;font-weight:700">💪 강점 / 🩹 약점</div>
+      <input type="text" id="dStrength" maxlength="100" placeholder="강점 한 줄 (선택)" value="${escapeHtml(d.강점||'')}">
+      <input type="text" id="dWeak" maxlength="100" placeholder="약점 한 줄 (선택)" value="${escapeHtml(d.약점||'')}" style="margin-top:6px">
+      <div class="actions" style="margin-top:20px">
+        <button class="primary big" id="deepDone">완료 → 결과 보기</button>
+      </div>
+    </div>`;
+  stage.querySelectorAll('.dopt').forEach(el=>{
+    el.onclick = ()=>{
+      const key = el.dataset.key;
+      stage.querySelectorAll('.dopt[data-key="'+key+'"]').forEach(x=>x.classList.remove('sel'));
+      el.classList.add('sel');
+      d[key] = el.dataset.v;
+    };
+  });
+  document.getElementById('deepDone').onclick = ()=>{
+    stage.querySelectorAll('.dwhy').forEach(inp=>{ const v=inp.value.trim(); if(v) d.whys[inp.dataset.why]=v; else delete d.whys[inp.dataset.why]; });
+    d.절대_원칙 = (document.getElementById('dPrinciple').value||"").trim();
+    d.강점 = (document.getElementById('dStrength').value||"").trim();
+    d.약점 = (document.getElementById('dWeak').value||"").trim();
+    // 하나라도 채웠으면 심화로 인정, 전부 비면 입구 시드 그대로
+    state.deepDone = !!(d.분해_방식||d.추상_고도||d.최악_상정||d.절대_원칙||d.강점||d.약점);
+    renderResult();
+  };
+  window.scrollTo(0,0);
 }
 
 /* ── 커널 조립 (kernel-quiz-5min.md 파이프라인과 동일 스키마) ── */
@@ -429,7 +493,7 @@ function buildKernel(){
   const avgMs = Math.round(msList.reduce((s,m)=>s+(m||0),0)/msList.length);
   const overList = [a.q1,a.q2,a.q3,a.q4,a.q5].map(x=>!!x.overtime);
   const inTime = overList.filter(o=>!o).length;
-  return {
+  const kb = {
     _meta:{ source:"8초의 나(입구 시드) 초안", confirmed:false,
       note:"본인 확인 전 = 초안. 고강도 위임 금지. 게임 맥락 선택이라 실제 손익 상황과 다를 수 있음 깊이는 실제 결정 관찰(L2)로 채운다.",
       avg_decision_ms:avgMs, per_card_ms:msList, limit_ms:LIMIT_MS, overtime:overList, in_time:inTime,
@@ -440,6 +504,20 @@ function buildKernel(){
     관통원리_본인작성: state.userAxis || null, 관통원리_차이: state.axisDiff || null,
     근거_원문_왜:{ q1_시작반사:a.q1.why, q2_정보식욕:a.q2.why, q3_리스크:a.q3.why, q4_tiebreak:a.q4.why, q5_가치저울:a.q5.why }
   };
+  // 심화 라운드를 했으면 convert-kernel 이 아는 심화 필드를 얹는다.
+  if(state.deepDone){
+    const d = state.deep || {}; const w = d.whys || {};
+    if(d.분해_방식) kb.분해_방식 = d.분해_방식;
+    if(d.추상_고도) kb.추상_고도 = d.추상_고도;
+    if(d.최악_상정) kb.최악_상정 = d.최악_상정;
+    if(d.절대_원칙) kb.절대_원칙 = d.절대_원칙;
+    const 강=(d.강점||"").trim(), 약=(d.약점||"").trim();
+    if(강||약) kb.강점_약점 = [강&&("강점: "+강), 약&&("약점: "+약)].filter(Boolean).join("\n");
+    Object.assign(kb.근거_원문_왜, { d1_분해:w.d1_분해||"", d2_추상:w.d2_추상||"", d3_최악:w.d3_최악||"" });
+    kb._meta.source = "8초의 나 + 심화 초안";
+    kb._meta.note = "본인 확인 전 = 초안. 고강도 위임 금지. 5결정 + 심화 라운드. 게임 맥락이라 실제와 다를 수 있어, 깊이는 실제 결정 관찰(L2)로 보강.";
+  }
+  return kb;
 }
 
 /* ── 결과 ── */
@@ -529,7 +607,7 @@ function renderResult(){
     const txt = `[내 판단 방식] ${nick.spdEmoji}${nick.emoji} ${nick.label} (초안)\n\n일 떨어지면: ${k.시작_반사}\n위험 앞에서: ${k.리스크_자세}\n버리는 것 → 지키는 것: ${k.우선순위_힌트}\n\n"${headline}"\n평균 결정 ${(avgMs/1000).toFixed(1)}초\n(8초의 나 · 판단 게임)`;
     navigator.clipboard.writeText(txt).then(()=>toast("결과 복사됨"));
   };
-  document.getElementById('again').onclick = ()=>{ Object.assign(state,{i:0,ans:{},done:false,userAxis:"",userAxisDone:false,axisDiff:""}); renderIntro(); };
+  document.getElementById('again').onclick = ()=>{ Object.assign(state,{i:0,ans:{},done:false,userAxis:"",userAxisDone:false,axisDiff:"",deep:{whys:{}},deepDone:false}); renderIntro(); };
 
   if(collectOn){
     const ppO=document.getElementById('ppOpen'); if(ppO) ppO.onclick=()=>document.getElementById('ppModal').classList.add('show');
