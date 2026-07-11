@@ -461,7 +461,7 @@ function renderDeepCard(){
         <input type="text" id="dt1" maxlength="${q.type==="text2"?100:120}" placeholder="${q.type==="text2"?q.ph1:q.ph} (선택 · 개인정보 X)" value="${escapeHtml(q.type==="text2"?(d.강점||''):(d.절대_원칙||''))}">
         ${q.type==="text2"?`<input type="text" id="dt2" maxlength="100" placeholder="${q.ph2} (선택)" value="${escapeHtml(d.약점||'')}" style="margin-top:8px">`:''}
         <div class="mini" style="margin-top:8px">시간제한 없음 · 비워도 됩니다(넘기면 '미채굴').</div>
-        <div style="margin-top:8px"><button class="primary" id="dNext">다음 →</button></div>
+        <div style="margin-top:8px"><button type="button" class="primary" id="dNext">다음 →</button></div>
       </div>`;
     const go = ()=>{
       if(q.type==="text2"){ d.강점=(document.getElementById('dt1').value||'').trim(); d.약점=(document.getElementById('dt2').value||'').trim(); }
@@ -470,7 +470,11 @@ function renderDeepCard(){
     };
     document.getElementById('dNext').onclick = go;
     const dt1=document.getElementById('dt1');
-    dt1.onkeydown=e=>{ if(e.key==="Enter" && q.type!=="text2"){ e.preventDefault(); go(); } };
+    dt1.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); if(q.type==="text2"){ document.getElementById('dt2').focus(); } else { go(); } } };
+    if(q.type==="text2"){
+      const dt2=document.getElementById('dt2');
+      if(dt2) dt2.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); go(); } };
+    }
     dt1.focus();
     return;
   }
